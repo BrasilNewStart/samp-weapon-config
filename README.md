@@ -197,8 +197,7 @@ Same as above, but for hits inflicted with `OnPlayerGiveDamage`
 ```pawn
 DamagePlayer(playerid, Float:amount, issuerid = INVALID_PLAYER_ID, weaponid = WEAPON_UNKNOWN, bodypart = BODY_PART_UNKNOWN, bool:ignore_armour = false);
 ```
-Inflict a hit on a player. All callbacks except `OnPlayerWeaponShot` will be called.  
-**Note:** do not use it inside OnPlayerDamage as you can just modify `amount` there
+Inflict a hit on a player. All callbacks except `OnPlayerWeaponShot` will be called.
 * `ignore_armour` - When `true` will do damage straight to health, and not armour.
 
 ```pawn
@@ -289,17 +288,7 @@ Check if users anti-cbug is toggled. (Using no playerid param will show the glob
 ```pawn
 SetDamageFeed(bool:toggle);
 ```
-Toggle damage feed for all
-
-```pawn
-SetDamageFeedForPlayer(playerid, toggle = -1);
-```
-Toggle damage feed for player
-
-```pawn
-IsDamageFeedActive(playerid = -1);
-```
-Returns true if damage feed is active for player (for all, if `playerid` passed as -1)
+Toggle damage feed
 
 ```pawn
 SetDamageSounds(taken, given);
