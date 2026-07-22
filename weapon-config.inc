@@ -4041,15 +4041,15 @@ public OnPlayerGiveDamage(playerid, damagedid, Float:amount, WEAPON:weaponid, bo
 		return 0;
 	}
 
-	new Float:bullets, err;
+	new Float:bullets, errorVar;
 
-	if ((err = ProcessDamage(damagedid, playerid, amount, weaponid, bodypart, bullets))) {
-		if (err == WC_INVALID_DAMAGE) {
+	if ((errorVar = ProcessDamage(damagedid, playerid, amount, weaponid, bodypart, bullets))) {
+		if (errorVar == WC_INVALID_DAMAGE) {
 			AddRejectedHit(playerid, damagedid, HIT_INVALID_DAMAGE, weaponid, _:amount);
 		}
 
-		if (err != WC_INVALID_DISTANCE) {
-			OnInvalidWeaponDamage(playerid, damagedid, amount, weaponid, bodypart, err, true);
+		if (errorVar != WC_INVALID_DISTANCE) {
+			OnInvalidWeaponDamage(playerid, damagedid, amount, weaponid, bodypart, errorVar, true);
 		}
 
 		return 0;
@@ -4349,15 +4349,15 @@ public OnPlayerTakeDamage(playerid, issuerid, Float:amount, WEAPON:weaponid, bod
 		}
 	}
 
-	new Float:bullets = 0.0, err;
+	new Float:bullets = 0.0, errorVar;
 
-	if ((err = ProcessDamage(playerid, issuerid, amount, weaponid, bodypart, bullets))) {
-		if (err == WC_INVALID_DAMAGE) {
+	if ((errorVar = ProcessDamage(playerid, issuerid, amount, weaponid, bodypart, bullets))) {
+		if (errorVar == WC_INVALID_DAMAGE) {
 			AddRejectedHit(issuerid, playerid, HIT_INVALID_DAMAGE, weaponid, _:amount);
 		}
 
-		if (err != WC_INVALID_DISTANCE) {
-			OnInvalidWeaponDamage(issuerid, playerid, amount, weaponid, bodypart, err, false);
+		if (errorVar != WC_INVALID_DISTANCE) {
+			OnInvalidWeaponDamage(issuerid, playerid, amount, weaponid, bodypart, errorVar, false);
 		}
 
 		return 0;
@@ -6672,17 +6672,17 @@ static AddRejectedHit(playerid, damagedid, reason, WEAPON:weapon, i1 = 0, i2 = 0
 
 static GetPlayerActualSkin(playerid)
 {
-	#if defined GetPlayerCustomSkin
-		new skin = GetPlayerCustomSkin(playerid);
+	// #if defined GetPlayerCustomSkin
+	// 	new skin = GetPlayerCustomSkin(playerid);
 
-		if (skin == 0) {
-			skin = GetPlayerSkin(playerid);
-		}
+	// 	if (skin == 0) {
+	// 		skin = GetPlayerSkin(playerid);
+	// 	}
 
-		return skin;
-	#else
-		return GetPlayerSkin(playerid);
-	#endif
+	// 	return skin;
+	// #else
+	return GetPlayerSkin(playerid);
+	// #endif
 }
 
 #if !defined _INC_SKY
