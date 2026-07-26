@@ -3370,10 +3370,6 @@ public OnPlayerDeath(playerid, killerid, WEAPON:reason)
 	}
 
 	if (OnPlayerDamage(playerid, amount, killerid, reason, bodypart)) {
-		if (reason < WEAPON_UNARMED || reason > WEAPON_UNKNOWN) {
-			reason = WEAPON_UNKNOWN;
-		}
-
 		if (amount == 0.0) {
 			amount = s_PlayerHealth[playerid] + s_PlayerArmour[playerid];
 		}
@@ -6016,10 +6012,6 @@ static InflictDamage(playerid, Float:amount, issuerid = INVALID_PLAYER_ID, WEAPO
 	if (!OnPlayerDamage(playerid, amount, issuerid, weaponid, bodypart)) {
 		UpdateHealthBar(playerid, true);
 
-		if (weaponid < WEAPON_UNARMED || weaponid > WEAPON_UNKNOWN) {
-			weaponid = WEAPON_UNKNOWN;
-		}
-
 		#if WC_DEBUG
 			new Float:length = 0.0;
 
@@ -6040,10 +6032,6 @@ static InflictDamage(playerid, Float:amount, issuerid = INVALID_PLAYER_ID, WEAPO
 		#endif
 
 		return;
-	}
-
-	if (weaponid < WEAPON_UNARMED || weaponid > WEAPON_UNKNOWN) {
-		weaponid = WEAPON_UNKNOWN;
 	}
 
 	#if WC_DEBUG
@@ -6259,7 +6247,7 @@ static PlayerDeath(playerid, animlib[32], animname[32], bool:anim_lock = false, 
 	UpdateHealthBar(playerid, .forcesync = true);
 	FreezeSyncPacket(playerid, .toggle = freeze_sync);
 
-	if (respawn_time == -1) {
+	if (respawn_time < 0) {
 		respawn_time = s_RespawnTime;
 	}
 
@@ -7077,7 +7065,17 @@ public OnPlayerDamageDone(playerid, Float:amount, issuerid, WEAPON:weapon, bodyp
 
 public OnPlayerDamage(&playerid, &Float:amount, &issuerid, &WEAPON:weapon, &bodypart)
 {
-	return WC_OnPlayerDamage(playerid, amount, issuerid, weapon, bodypart);
+	new retval = WC_OnPlayerDamage(playerid, amount, issuerid, weapon, bodypart);
+
+	if (issuerid < 0 || issuerid >= MAX_PLAYERS) {
+		issuerid = INVALID_PLAYER_ID;
+	}
+
+	if (weapon < WEAPON_UNARMED || weapon > WEAPON_UNKNOWN) {
+		weapon = WEAPON_UNKNOWN;
+	}
+
+	return retval;
 }
 
 /*
