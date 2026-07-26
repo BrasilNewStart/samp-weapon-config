@@ -5084,6 +5084,7 @@ static ScriptExit()
 
 		SetFakeHealth(playerid, 255);
 		SetFakeArmour(playerid, 255);
+		UpdatePlayerVirtualWorld(playerid);
 		FreezeSyncPacket(playerid, .toggle = false);
 		SetFakeFacingAngle(playerid, _);
 		SetHealthBarVisible(playerid, false);
@@ -6671,8 +6672,8 @@ static DamageFeedRemoveHit(arr[WC_FEED_HEIGHT][E_DAMAGE_FEED_HIT], idx)
 
 static SaveSyncData(playerid)
 {
-	GetPlayerHealth(playerid, s_SyncData[playerid][e_Health]);
-	GetPlayerArmour(playerid, s_SyncData[playerid][e_Armour]);
+	s_SyncData[playerid][e_Health] = s_PlayerHealth[playerid];
+	s_SyncData[playerid][e_Armour] = s_PlayerArmour[playerid];
 
 	GetPlayerPos(playerid, s_SyncData[playerid][e_PosX], s_SyncData[playerid][e_PosY], s_SyncData[playerid][e_PosZ]);
 	GetPlayerFacingAngle(playerid, s_SyncData[playerid][e_PosA]);
