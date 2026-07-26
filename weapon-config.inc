@@ -1199,7 +1199,7 @@ stock WC_IsPlayerPaused(playerid)
 
 stock AverageShootRate(playerid, shots, &multiple_weapons = 0)
 {
-	if (playerid == INVALID_PLAYER_ID || s_ShotsFired[playerid] < shots) {
+	if (playerid < 0 || playerid >= MAX_PLAYERS || s_ShotsFired[playerid] < shots) {
 		return -1;
 	}
 
@@ -1236,7 +1236,7 @@ stock AverageShootRate(playerid, shots, &multiple_weapons = 0)
 
 stock AverageHitRate(playerid, hits, &multiple_weapons = 0)
 {
-	if (playerid == INVALID_PLAYER_ID || s_HitsIssued[playerid] < hits) {
+	if (playerid < 0 || playerid >= MAX_PLAYERS || s_HitsIssued[playerid] < hits) {
 		return -1;
 	}
 
@@ -1891,7 +1891,7 @@ stock GetRejectedHit(playerid, idx, output[], maxlength = sizeof(output))
 
 stock ResyncPlayer(playerid)
 {
-	if (0 <= playerid < MAX_PLAYERS) {
+	if (IsPlayerConnected(playerid)) {
 		SaveSyncData(playerid);
 
 		s_BeingResynced[playerid] = true;
@@ -1973,13 +1973,16 @@ stock WC_SetPlayerHealth(playerid, Float:health, Float:armour = -1.0)
 	}
 
 	if (health <= 0.0) {
-		s_PlayerArmour[playerid] = 0.0;
-		s_PlayerHealth[playerid] = 0.0;
-
 		if (IsPlayerNPC(playerid)) {
+			s_PlayerArmour[playerid] = 0.0;
+			s_PlayerHealth[playerid] = 0.0;
+
 			UpdateHealthBar(playerid, true);
-		} else {
+		} else if (WC_IsPlayerSpawned(playerid)) {
 			InflictDamage(playerid, 0.0);
+		} else {
+			s_PlayerArmour[playerid] = 0.0;
+			s_PlayerHealth[playerid] = 0.0;
 		}
 	} else {
 		if (armour >= 0.0) {
@@ -2018,7 +2021,9 @@ stock WC_SetPlayerArmour(playerid, Float:armour)
 		return 0;
 	}
 
-	if (armour >= 0.0) {
+	if (armour <= 0.0) {
+		s_PlayerArmour[playerid] = 0.0;
+	} else {
 		if (armour > s_PlayerMaxArmour[playerid]) {
 			armour = s_PlayerMaxArmour[playerid];
 		}
