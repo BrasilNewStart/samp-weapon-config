@@ -6481,7 +6481,7 @@ static DamageFeedUpdate(playerid, bool:modified = false)
 
 static DamageFeedUpdateText(playerid)
 {
-	new buf[64 * WC_FEED_HEIGHT] = "";
+	new buf[64 * WC_FEED_HEIGHT] = "", damagedid = INVALID_PLAYER_ID;
 
 	for (new i = 0, weapon[32]; i < sizeof(s_DamageFeedHitsGiven[]); i++) {
 		if (!s_DamageFeedHitsGiven[playerid][i][e_Tick]) {
@@ -6493,6 +6493,8 @@ static DamageFeedUpdateText(playerid)
 		} else {
 			WC_GetWeaponName(s_DamageFeedHitsGiven[playerid][i][e_Weapon], weapon);
 		}
+
+		damagedid = s_DamageFeedHitsGiven[playerid][i][e_Issuer];
 
 		if (s_DamageFeedHitsGiven[playerid][i][e_Issuer] == INVALID_PLAYER_ID) {
 			format(
@@ -6512,7 +6514,7 @@ static DamageFeedUpdateText(playerid)
 				s_DamageFeedHitsGiven[playerid][i][e_Name],
 				weapon,
 				s_DamageFeedHitsGiven[playerid][i][e_Amount] + 0.009,
-				s_PlayerHealth[s_DamageFeedHitsGiven[playerid][i][e_Issuer]]
+				s_PlayerHealth[damagedid]
 			);
 		}
 	}
@@ -6529,6 +6531,11 @@ static DamageFeedUpdateText(playerid)
 	}
 
 	buf = "";
+	damagedid = s_Spectating[playerid];
+
+	if (damagedid == INVALID_PLAYER_ID) {
+		damagedid = playerid;
+	}
 
 	for (new i = 0, weapon[32]; i < sizeof(s_DamageFeedHitsTaken[]); i++) {
 		if (!s_DamageFeedHitsTaken[playerid][i][e_Tick]) {
@@ -6549,7 +6556,7 @@ static DamageFeedUpdateText(playerid)
 				buf,
 				weapon,
 				s_DamageFeedHitsTaken[playerid][i][e_Amount] + 0.009,
-				s_PlayerHealth[playerid]
+				s_PlayerHealth[damagedid]
 			);
 		} else {
 			format(
@@ -6560,7 +6567,7 @@ static DamageFeedUpdateText(playerid)
 				s_DamageFeedHitsTaken[playerid][i][e_Name],
 				weapon,
 				s_DamageFeedHitsTaken[playerid][i][e_Amount] + 0.009,
-				s_PlayerHealth[s_DamageFeedHitsGiven[playerid][i][e_Issuer]]
+				s_PlayerHealth[damagedid]
 			);
 		}
 	}
