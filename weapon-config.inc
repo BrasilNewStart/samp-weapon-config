@@ -1312,7 +1312,7 @@ stock GetHealthBarPosition(&Float:x, &Float:y, playerid = INVALID_PLAYER_ID)
 		x = s_PlayerHealthBarPosX[playerid] == s_PlayerHealthBarPosX[playerid] ? s_PlayerHealthBarPosX[playerid] : s_HealthBarPosX;
 		y = s_PlayerHealthBarPosY[playerid] == s_PlayerHealthBarPosY[playerid] ? s_PlayerHealthBarPosY[playerid] : s_HealthBarPosY;
 
-		return;	
+		return;
 	}
 
 	x = s_HealthBarPosX;
@@ -1325,7 +1325,7 @@ stock GetHealthBarSize(&Float:x, &Float:y, playerid = INVALID_PLAYER_ID)
 		x = s_PlayerHealthBarSizeX[playerid] == s_PlayerHealthBarSizeX[playerid] ? s_PlayerHealthBarSizeX[playerid] : s_HealthBarSizeX;
 		y = s_PlayerHealthBarSizeY[playerid] == s_PlayerHealthBarSizeY[playerid] ? s_PlayerHealthBarSizeY[playerid] : s_HealthBarSizeY;
 
-		return;	
+		return;
 	}
 
 	x = s_HealthBarSizeX;
@@ -1457,7 +1457,7 @@ stock GetHealthBarColor(&borderColor = 0, &bgColor = 0, &fgColor = 0, playerid =
 		bgColor = s_PlayerHealthBarBGColor[playerid] != 0 ? s_PlayerHealthBarBGColor[playerid] : s_HealthBarBGColor;
 		fgColor = s_PlayerHealthBarFGColor[playerid] != 0 ? s_PlayerHealthBarFGColor[playerid] : s_HealthBarFGColor;
 
-		return;	
+		return;
 	}
 
 	borderColor = s_HealthBarBorderColor;
@@ -2842,6 +2842,7 @@ public OnPlayerConnect(playerid)
 	s_LastExplosive[playerid] = WEAPON_UNARMED;
 	s_LastShotIdx[playerid] = 0;
 	s_LastShot[playerid][e_Tick] = 0;
+	s_LastShot[playerid][e_Valid] = false;
 	s_LastHitIdx[playerid] = 0;
 	s_RejectedHitIdx[playerid] = 0;
 	s_ShotsFired[playerid] = 0;
@@ -2871,8 +2872,11 @@ public OnPlayerConnect(playerid)
 	s_PlayerClass[playerid] = -2;
 	s_SpawnInfoModified[playerid] = false;
 	s_PlayerFallbackSpawnInfo[playerid][e_Skin] = -1;
+	s_LastDeathTick[playerid] = 0;
 	s_DeathSkip[playerid] = 0;
 	s_LastVehicleTick[playerid] = 0;
+	s_DamageDoneHealth[playerid] = 0.0;
+	s_DamageDoneArmour[playerid] = 0.0;
 	s_PreviousHitIdx[playerid] = 0;
 	s_CbugAllowed[playerid] = s_CbugGlobal;
 	s_CbugFroze[playerid] = 0;
@@ -3065,6 +3069,7 @@ public OnPlayerSpawn(playerid)
 {
 	s_TrueDeath[playerid] = false;
 	s_InClassSelection[playerid] = false;
+	s_CbugFroze[playerid] = 0;
 
 	if (s_DeathTimer[playerid]) {
 		KillTimer(s_DeathTimer[playerid]);
@@ -3538,6 +3543,7 @@ public OnPlayerKeyStateChange(playerid, KEY:newkeys, KEY:oldkeys)
 
 								KillTimer(s_DelayedDeathTimer[i]);
 								s_DelayedDeathTimer[i] = 0;
+
 								ClearAnimations(i, FORCE_SYNC:1);
 								SetFakeFacingAngle(i, _);
 								FreezeSyncPacket(i, .toggle = false);
@@ -4030,7 +4036,6 @@ public OnPlayerGiveDamage(playerid, damagedid, Float:amount, WEAPON:weaponid, bo
 
 			if (anim != 747 && anim != 748) {
 				DebugMessageRed(playerid, "applying knife anim for you too (current: %d)", anim);
-
 				forcesync = 1;
 			}
 
@@ -4231,7 +4236,6 @@ public OnPlayerTakeDamage(playerid, issuerid, Float:amount, WEAPON:weaponid, bod
 
 			if (s_KnifeTimeout[playerid]) {
 				KillTimer(s_KnifeTimeout[playerid]);
-
 				s_KnifeTimeout[playerid] = 0;
 			}
 
@@ -4285,7 +4289,6 @@ public OnPlayerTakeDamage(playerid, issuerid, Float:amount, WEAPON:weaponid, bod
 
 			if (anim != 747) {
 				DebugMessageRed(issuerid, "applying knife anim for you too (current: %d)", anim);
-
 				forcesync = 1;
 			}
 
