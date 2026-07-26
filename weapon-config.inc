@@ -878,7 +878,7 @@ static s_DamageArmour[][2] = {
 };
 
 // That's right, it's called cuntgun
-stock const g_WeaponName[57][WC_MAX_WEAPON_NAME] = {
+stock g_WeaponName[56][WC_MAX_WEAPON_NAME] = {
 	{"Fist"             }, {"Brass knuckles"}, {"Golf club"           },
 	{"Nightstick"       }, {"Knife"         }, {"Bat"                 },
 	{"Shovel"           }, {"Pool cue"      }, {"Katana"              },
@@ -897,7 +897,7 @@ stock const g_WeaponName[57][WC_MAX_WEAPON_NAME] = {
 	{"Infrared goggles" }, {"Parachute"     }, {"Fake pistol"         },
 	{"Pistol whip"      }, {"Vehicle"       }, {"Helicopter blades"   },
 	{"Explosion"        }, {"Car parking"   }, {"Drowning"            },
-	{"Collision"        }, {"Splat"         }, {"Unknown"             }
+	{"Collision"        }, {"Splat"         }
 };
 
 // Yes - this is every single one of them
