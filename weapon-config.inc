@@ -1045,6 +1045,7 @@ static bool:s_CbugGlobal = true;
 static bool:s_CbugDeathDelay = true;
 static bool:s_CbugAllowed[MAX_PLAYERS] = {true, ...};
 static s_CbugFroze[MAX_PLAYERS];
+static s_CbugTimeout[MAX_PLAYERS];
 
 static s_MaxShootRateSamples = 4;
 static s_MaxHitRateSamples = 4;
@@ -1104,6 +1105,7 @@ static s_DeathSkipTick[MAX_PLAYERS];
 static bool:s_BeingResynced[MAX_PLAYERS] = {false, ...};
 static bool:s_SpawnForStreamedIn[MAX_PLAYERS] = {false, ...};
 static s_KnifeTimeout[MAX_PLAYERS];
+static s_KnifeAnimTimer[MAX_PLAYERS];
 static s_SyncData[MAX_PLAYERS][E_RESYNC_DATA];
 
 static s_VehiclePassengerDamage = false;
@@ -2843,6 +2845,7 @@ public OnPlayerConnect(playerid)
 	s_IsDying[playerid] = false;
 	s_BeingResynced[playerid] = false;
 	s_SpawnForStreamedIn[playerid] = false;
+	s_KnifeAnimTimer[playerid] = 0;
 	s_KnifeTimeout[playerid] = 0;
 	s_World[playerid] = 0;
 	s_LastAnim[playerid] = -1;
@@ -2868,6 +2871,7 @@ public OnPlayerConnect(playerid)
 	s_PreviousHitIdx[playerid] = 0;
 	s_CbugAllowed[playerid] = s_CbugGlobal;
 	s_CbugFroze[playerid] = 0;
+	s_CbugTimeout[playerid] = 0;
 	s_DeathTimer[playerid] = 0;
 	s_DelayedDeathTimer[playerid] = 0;
 	s_DamageFeedPlayer[playerid] = -1;
@@ -2976,6 +2980,16 @@ public OnPlayerDisconnect(playerid, reason)
 		s_DeathTimer[playerid] = 0;
 	}
 
+	if (s_CbugTimeout[playerid]) {
+		KillTimer(s_CbugTimeout[playerid]);
+		s_CbugTimeout[playerid] = 0;
+	}
+
+	if (s_KnifeAnimTimer[playerid]) {
+		KillTimer(s_KnifeAnimTimer[playerid]);
+		s_KnifeAnimTimer[playerid] = 0;
+	}
+
 	if (s_KnifeTimeout[playerid]) {
 		KillTimer(s_KnifeTimeout[playerid]);
 		s_KnifeTimeout[playerid] = 0;
@@ -3050,6 +3064,11 @@ public OnPlayerSpawn(playerid)
 	if (s_DeathTimer[playerid]) {
 		KillTimer(s_DeathTimer[playerid]);
 		s_DeathTimer[playerid] = 0;
+	}
+
+	if (s_KnifeAnimTimer[playerid]) {
+		KillTimer(s_KnifeAnimTimer[playerid]);
+		s_KnifeAnimTimer[playerid] = 0;
 	}
 
 	if (s_ForceClassSelection[playerid]) {
@@ -3203,6 +3222,11 @@ public OnPlayerRequestClass(playerid, classid)
 		s_DeathTimer[playerid] = 0;
 	}
 
+	if (s_KnifeAnimTimer[playerid]) {
+		KillTimer(s_KnifeAnimTimer[playerid]);
+		s_KnifeAnimTimer[playerid] = 0;
+	}
+
 	if (s_DeathSkip[playerid]) {
 		DebugMessage(playerid, "Skipping death - class selection skipped");
 		SpawnPlayer(playerid);
@@ -3281,9 +3305,19 @@ public OnPlayerDeath(playerid, killerid, WEAPON:reason)
 		}
 	#endif
 
+	if (s_DelayedDeathTimer[playerid]) {
+		KillTimer(s_DelayedDeathTimer[playerid]);
+		s_DelayedDeathTimer[playerid] = 0;
+	}
+
 	if (s_DeathTimer[playerid]) {
 		KillTimer(s_DeathTimer[playerid]);
 		s_DeathTimer[playerid] = 0;
+	}
+
+	if (s_CbugTimeout[playerid]) {
+		KillTimer(s_CbugTimeout[playerid]);
+		s_CbugTimeout[playerid] = 0;
 	}
 
 	if (s_BeingResynced[playerid] || s_ForceClassSelection[playerid]) {
@@ -3433,13 +3467,13 @@ public OnPlayerDeath(playerid, killerid, WEAPON:reason)
 static Float:AngleBetweenPoints(Float:x1, Float:y1, Float:x2, Float:y2);
 
 forward WC_CbugPunishment(playerid, WEAPON:weapon);
-public WC_CbugPunishment(playerid, WEAPON:weapon) {
-	FreezeSyncPacket(playerid, .toggle = false);
-	SetPlayerArmedWeapon(playerid, weapon);
+public WC_CbugPunishment(playerid, WEAPON:weapon)
+{
+	s_CbugTimeout[playerid] = 0;
 
-	if (!s_IsDying[playerid]) {
-		ClearAnimations(playerid, FORCE_SYNC:1);
-	}
+	FreezeSyncPacket(playerid, .toggle = false);
+	ClearAnimations(playerid, FORCE_SYNC:1);
+	SetPlayerArmedWeapon(playerid, weapon);
 }
 
 public OnPlayerKeyStateChange(playerid, KEY:newkeys, KEY:oldkeys)
@@ -3470,8 +3504,12 @@ public OnPlayerKeyStateChange(playerid, KEY:newkeys, KEY:oldkeys)
 				ApplyAnimation(playerid, animlib, animname, 4.1, true, false, false, false, 0, FORCE_SYNC:1);
 				FreezeSyncPacket(playerid, .toggle = true);
 				SetPlayerArmedWeapon(playerid, w);
-				SetTimerEx("WC_CbugPunishment", 600, false, "ii", playerid, GetPlayerWeapon(playerid));
 
+				if (s_CbugTimeout[playerid]) {
+					KillTimer(s_CbugTimeout[playerid]);
+				}
+
+				s_CbugTimeout[playerid] = SetTimerEx("WC_CbugPunishment", 600, false, "ii", playerid, GetPlayerWeapon(playerid));
 				s_CbugFroze[playerid] = tick;
 
 				new j = 0, Float:health, Float:armour;
@@ -3967,8 +4005,11 @@ public OnPlayerGiveDamage(playerid, damagedid, Float:amount, WEAPON:weaponid, bo
 			new animlib[32] = "KNIFE", animname[32] = "KILL_Knife_Ped_Damage";
 			PlayerDeath(damagedid, animlib, animname, _, 5200);
 
-			SetTimerEx("WC_SecondKnifeAnim", 2200, false, "i", damagedid);
+			if (s_KnifeAnimTimer[damagedid]) {
+				KillTimer(s_KnifeAnimTimer[damagedid]);
+			}
 
+			s_KnifeAnimTimer[damagedid] = SetTimerEx("WC_SecondKnifeAnim", 2200, false, "i", damagedid);
 			WC_OnPlayerDeath(damagedid, playerid, weaponid);
 
 			DebugMessage(damagedid, "being knifed by %d", playerid);
@@ -5023,13 +5064,6 @@ static ScriptExit()
 	#else
 	for (new playerid = 0; playerid != MAX_PLAYERS; playerid++) {
 	#endif
-		#if WC_CUSTOM_VENDING_MACHINES
-			if (s_VendingUseTimer[playerid]) {
-				KillTimer(s_VendingUseTimer[playerid]);
-				s_VendingUseTimer[playerid] = 0;
-			}
-		#endif
-
 		// Put things back the way they were
 		SetPlayerTeam(playerid, s_PlayerTeam[playerid]);
 
@@ -6164,12 +6198,9 @@ static InflictDamage(playerid, Float:amount, issuerid = INVALID_PLAYER_ID, WEAPO
 }
 
 forward WC_DelayedDeath(playerid, issuerid, WEAPON:reason);
-public WC_DelayedDeath(playerid, issuerid, WEAPON:reason) {
-	if (s_DelayedDeathTimer[playerid]) {
-		KillTimer(s_DelayedDeathTimer[playerid]);
-		s_DelayedDeathTimer[playerid] = 0;
-	}
-
+public WC_DelayedDeath(playerid, issuerid, WEAPON:reason)
+{
+	s_DelayedDeathTimer[playerid] = 0;
 	WC_OnPlayerDeath(playerid, issuerid, reason);
 }
 
@@ -6182,6 +6213,11 @@ static PlayerDeath(playerid, animlib[32], animname[32], bool:anim_lock = false, 
 	if (s_DelayedDeathTimer[playerid]) {
 		KillTimer(s_DelayedDeathTimer[playerid]);
 		s_DelayedDeathTimer[playerid] = 0;
+	}
+
+	if (s_CbugTimeout[playerid]) {
+		KillTimer(s_CbugTimeout[playerid]);
+		s_CbugTimeout[playerid] = 0;
 	}
 
 	#if defined _INC_open_mp
@@ -6925,6 +6961,8 @@ static ClearAnimationsForPlayer(playerid, forplayerid)
 forward WC_SecondKnifeAnim(playerid);
 public WC_SecondKnifeAnim(playerid)
 {
+	s_KnifeAnimTimer[playerid] = 0;
+
 	new animlib[] = "KNIFE", animname[] = "KILL_Knife_Ped_Die";
 	ApplyAnimation(playerid, animlib, animname, 4.1, false, true, true, true, 3000, FORCE_SYNC:1);
 }
