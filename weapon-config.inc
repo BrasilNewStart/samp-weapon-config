@@ -2136,7 +2136,7 @@ stock WC_AddPlayerClass(modelid, Float:spawn_x, Float:spawn_y, Float:spawn_z, Fl
 
 	if (0 <= classid < WC_MAX_CLASSES) {
 		s_ClassSpawnInfo[classid][e_Skin] = modelid;
-		s_ClassSpawnInfo[classid][e_Team] = 0x7FFFFFFF;
+		s_ClassSpawnInfo[classid][e_Team] = NO_TEAM;
 		s_ClassSpawnInfo[classid][e_PosX] = spawn_x;
 		s_ClassSpawnInfo[classid][e_PosY] = spawn_y;
 		s_ClassSpawnInfo[classid][e_PosZ] = spawn_z;
@@ -3120,14 +3120,14 @@ public OnPlayerSpawn(playerid)
 
 		if (classid == -1) {
 			spawn_info = s_PlayerSpawnInfo[playerid];
-		} else if (classid == -2) {
-			spawn_info = s_PlayerFallbackSpawnInfo[playerid];
-		} else {
+		} else if (0 <= classid < WC_MAX_CLASSES) {
 			if (s_ClassSpawnInfo[classid][e_Skin] == -1 && s_PlayerFallbackSpawnInfo[playerid][e_Skin] != -1) {
 				spawn_info = s_PlayerFallbackSpawnInfo[playerid];
 			} else {
 				spawn_info = s_ClassSpawnInfo[classid];
 			}
+		} else {
+			spawn_info = s_PlayerFallbackSpawnInfo[playerid];
 		}
 
 		if (spawn_info[e_Skin] != -1) {
@@ -3469,8 +3469,6 @@ public OnPlayerDeath(playerid, killerid, WEAPON:reason)
 	return 1;
 }
 
-static Float:AngleBetweenPoints(Float:x1, Float:y1, Float:x2, Float:y2);
-
 forward WC_CbugPunishment(playerid, WEAPON:weapon);
 public WC_CbugPunishment(playerid, WEAPON:weapon)
 {
@@ -3480,6 +3478,8 @@ public WC_CbugPunishment(playerid, WEAPON:weapon)
 	ClearAnimations(playerid, FORCE_SYNC:1);
 	SetPlayerArmedWeapon(playerid, weapon);
 }
+
+static Float:AngleBetweenPoints(Float:x1, Float:y1, Float:x2, Float:y2);
 
 public OnPlayerKeyStateChange(playerid, KEY:newkeys, KEY:oldkeys)
 {
