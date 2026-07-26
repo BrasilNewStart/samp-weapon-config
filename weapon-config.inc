@@ -878,7 +878,7 @@ static s_DamageArmour[][2] = {
 };
 
 // That's right, it's called cuntgun
-stock const g_WeaponName[57][WC_MAX_WEAPON_NAME] = {
+stock g_WeaponName[56][WC_MAX_WEAPON_NAME] = {
 	{"Fist"             }, {"Brass knuckles"}, {"Golf club"           },
 	{"Nightstick"       }, {"Knife"         }, {"Bat"                 },
 	{"Shovel"           }, {"Pool cue"      }, {"Katana"              },
@@ -897,7 +897,7 @@ stock const g_WeaponName[57][WC_MAX_WEAPON_NAME] = {
 	{"Infrared goggles" }, {"Parachute"     }, {"Fake pistol"         },
 	{"Pistol whip"      }, {"Vehicle"       }, {"Helicopter blades"   },
 	{"Explosion"        }, {"Car parking"   }, {"Drowning"            },
-	{"Collision"        }, {"Splat"         }, {"Unknown"             }
+	{"Collision"        }, {"Splat"         }
 };
 
 // Yes - this is every single one of them
@@ -1045,6 +1045,7 @@ static bool:s_CbugGlobal = true;
 static bool:s_CbugDeathDelay = true;
 static bool:s_CbugAllowed[MAX_PLAYERS] = {true, ...};
 static s_CbugFroze[MAX_PLAYERS];
+static s_CbugTimeout[MAX_PLAYERS];
 
 static s_MaxShootRateSamples = 4;
 static s_MaxHitRateSamples = 4;
@@ -1104,6 +1105,7 @@ static s_DeathSkipTick[MAX_PLAYERS];
 static bool:s_BeingResynced[MAX_PLAYERS] = {false, ...};
 static bool:s_SpawnForStreamedIn[MAX_PLAYERS] = {false, ...};
 static s_KnifeTimeout[MAX_PLAYERS];
+static s_KnifeAnimTimer[MAX_PLAYERS];
 static s_SyncData[MAX_PLAYERS][E_RESYNC_DATA];
 
 static s_VehiclePassengerDamage = false;
@@ -1197,7 +1199,7 @@ stock WC_IsPlayerPaused(playerid)
 
 stock AverageShootRate(playerid, shots, &multiple_weapons = 0)
 {
-	if (playerid == INVALID_PLAYER_ID || s_ShotsFired[playerid] < shots) {
+	if (playerid < 0 || playerid >= MAX_PLAYERS || s_ShotsFired[playerid] < shots) {
 		return -1;
 	}
 
@@ -1234,7 +1236,7 @@ stock AverageShootRate(playerid, shots, &multiple_weapons = 0)
 
 stock AverageHitRate(playerid, hits, &multiple_weapons = 0)
 {
-	if (playerid == INVALID_PLAYER_ID || s_HitsIssued[playerid] < hits) {
+	if (playerid < 0 || playerid >= MAX_PLAYERS || s_HitsIssued[playerid] < hits) {
 		return -1;
 	}
 
@@ -1310,7 +1312,7 @@ stock GetHealthBarPosition(&Float:x, &Float:y, playerid = INVALID_PLAYER_ID)
 		x = s_PlayerHealthBarPosX[playerid] == s_PlayerHealthBarPosX[playerid] ? s_PlayerHealthBarPosX[playerid] : s_HealthBarPosX;
 		y = s_PlayerHealthBarPosY[playerid] == s_PlayerHealthBarPosY[playerid] ? s_PlayerHealthBarPosY[playerid] : s_HealthBarPosY;
 
-		return;	
+		return;
 	}
 
 	x = s_HealthBarPosX;
@@ -1323,7 +1325,7 @@ stock GetHealthBarSize(&Float:x, &Float:y, playerid = INVALID_PLAYER_ID)
 		x = s_PlayerHealthBarSizeX[playerid] == s_PlayerHealthBarSizeX[playerid] ? s_PlayerHealthBarSizeX[playerid] : s_HealthBarSizeX;
 		y = s_PlayerHealthBarSizeY[playerid] == s_PlayerHealthBarSizeY[playerid] ? s_PlayerHealthBarSizeY[playerid] : s_HealthBarSizeY;
 
-		return;	
+		return;
 	}
 
 	x = s_HealthBarSizeX;
@@ -1455,7 +1457,7 @@ stock GetHealthBarColor(&borderColor = 0, &bgColor = 0, &fgColor = 0, playerid =
 		bgColor = s_PlayerHealthBarBGColor[playerid] != 0 ? s_PlayerHealthBarBGColor[playerid] : s_HealthBarBGColor;
 		fgColor = s_PlayerHealthBarFGColor[playerid] != 0 ? s_PlayerHealthBarFGColor[playerid] : s_HealthBarFGColor;
 
-		return;	
+		return;
 	}
 
 	borderColor = s_HealthBarBorderColor;
@@ -1889,7 +1891,7 @@ stock GetRejectedHit(playerid, idx, output[], maxlength = sizeof(output))
 
 stock ResyncPlayer(playerid)
 {
-	if (0 <= playerid < MAX_PLAYERS) {
+	if (IsPlayerConnected(playerid)) {
 		SaveSyncData(playerid);
 
 		s_BeingResynced[playerid] = true;
@@ -1971,13 +1973,16 @@ stock WC_SetPlayerHealth(playerid, Float:health, Float:armour = -1.0)
 	}
 
 	if (health <= 0.0) {
-		s_PlayerArmour[playerid] = 0.0;
-		s_PlayerHealth[playerid] = 0.0;
-
 		if (IsPlayerNPC(playerid)) {
+			s_PlayerArmour[playerid] = 0.0;
+			s_PlayerHealth[playerid] = 0.0;
+
 			UpdateHealthBar(playerid, true);
-		} else {
+		} else if (WC_IsPlayerSpawned(playerid)) {
 			InflictDamage(playerid, 0.0);
+		} else {
+			s_PlayerArmour[playerid] = 0.0;
+			s_PlayerHealth[playerid] = 0.0;
 		}
 	} else {
 		if (armour >= 0.0) {
@@ -2016,7 +2021,9 @@ stock WC_SetPlayerArmour(playerid, Float:armour)
 		return 0;
 	}
 
-	if (armour >= 0.0) {
+	if (armour <= 0.0) {
+		s_PlayerArmour[playerid] = 0.0;
+	} else {
 		if (armour > s_PlayerMaxArmour[playerid]) {
 			armour = s_PlayerMaxArmour[playerid];
 		}
@@ -2129,7 +2136,7 @@ stock WC_AddPlayerClass(modelid, Float:spawn_x, Float:spawn_y, Float:spawn_z, Fl
 
 	if (0 <= classid < WC_MAX_CLASSES) {
 		s_ClassSpawnInfo[classid][e_Skin] = modelid;
-		s_ClassSpawnInfo[classid][e_Team] = 0x7FFFFFFF;
+		s_ClassSpawnInfo[classid][e_Team] = NO_TEAM;
 		s_ClassSpawnInfo[classid][e_PosX] = spawn_x;
 		s_ClassSpawnInfo[classid][e_PosY] = spawn_y;
 		s_ClassSpawnInfo[classid][e_PosZ] = spawn_z;
@@ -2835,6 +2842,7 @@ public OnPlayerConnect(playerid)
 	s_LastExplosive[playerid] = WEAPON_UNARMED;
 	s_LastShotIdx[playerid] = 0;
 	s_LastShot[playerid][e_Tick] = 0;
+	s_LastShot[playerid][e_Valid] = false;
 	s_LastHitIdx[playerid] = 0;
 	s_RejectedHitIdx[playerid] = 0;
 	s_ShotsFired[playerid] = 0;
@@ -2843,6 +2851,7 @@ public OnPlayerConnect(playerid)
 	s_IsDying[playerid] = false;
 	s_BeingResynced[playerid] = false;
 	s_SpawnForStreamedIn[playerid] = false;
+	s_KnifeAnimTimer[playerid] = 0;
 	s_KnifeTimeout[playerid] = 0;
 	s_World[playerid] = 0;
 	s_LastAnim[playerid] = -1;
@@ -2863,11 +2872,15 @@ public OnPlayerConnect(playerid)
 	s_PlayerClass[playerid] = -2;
 	s_SpawnInfoModified[playerid] = false;
 	s_PlayerFallbackSpawnInfo[playerid][e_Skin] = -1;
+	s_LastDeathTick[playerid] = 0;
 	s_DeathSkip[playerid] = 0;
 	s_LastVehicleTick[playerid] = 0;
+	s_DamageDoneHealth[playerid] = 0.0;
+	s_DamageDoneArmour[playerid] = 0.0;
 	s_PreviousHitIdx[playerid] = 0;
 	s_CbugAllowed[playerid] = s_CbugGlobal;
 	s_CbugFroze[playerid] = 0;
+	s_CbugTimeout[playerid] = 0;
 	s_DeathTimer[playerid] = 0;
 	s_DelayedDeathTimer[playerid] = 0;
 	s_DamageFeedPlayer[playerid] = -1;
@@ -2976,6 +2989,16 @@ public OnPlayerDisconnect(playerid, reason)
 		s_DeathTimer[playerid] = 0;
 	}
 
+	if (s_CbugTimeout[playerid]) {
+		KillTimer(s_CbugTimeout[playerid]);
+		s_CbugTimeout[playerid] = 0;
+	}
+
+	if (s_KnifeAnimTimer[playerid]) {
+		KillTimer(s_KnifeAnimTimer[playerid]);
+		s_KnifeAnimTimer[playerid] = 0;
+	}
+
 	if (s_KnifeTimeout[playerid]) {
 		KillTimer(s_KnifeTimeout[playerid]);
 		s_KnifeTimeout[playerid] = 0;
@@ -3046,10 +3069,16 @@ public OnPlayerSpawn(playerid)
 {
 	s_TrueDeath[playerid] = false;
 	s_InClassSelection[playerid] = false;
+	s_CbugFroze[playerid] = 0;
 
 	if (s_DeathTimer[playerid]) {
 		KillTimer(s_DeathTimer[playerid]);
 		s_DeathTimer[playerid] = 0;
+	}
+
+	if (s_KnifeAnimTimer[playerid]) {
+		KillTimer(s_KnifeAnimTimer[playerid]);
+		s_KnifeAnimTimer[playerid] = 0;
 	}
 
 	if (s_ForceClassSelection[playerid]) {
@@ -3096,14 +3125,14 @@ public OnPlayerSpawn(playerid)
 
 		if (classid == -1) {
 			spawn_info = s_PlayerSpawnInfo[playerid];
-		} else if (classid == -2) {
-			spawn_info = s_PlayerFallbackSpawnInfo[playerid];
-		} else {
+		} else if (0 <= classid < WC_MAX_CLASSES) {
 			if (s_ClassSpawnInfo[classid][e_Skin] == -1 && s_PlayerFallbackSpawnInfo[playerid][e_Skin] != -1) {
 				spawn_info = s_PlayerFallbackSpawnInfo[playerid];
 			} else {
 				spawn_info = s_ClassSpawnInfo[classid];
 			}
+		} else {
+			spawn_info = s_PlayerFallbackSpawnInfo[playerid];
 		}
 
 		if (spawn_info[e_Skin] != -1) {
@@ -3203,6 +3232,11 @@ public OnPlayerRequestClass(playerid, classid)
 		s_DeathTimer[playerid] = 0;
 	}
 
+	if (s_KnifeAnimTimer[playerid]) {
+		KillTimer(s_KnifeAnimTimer[playerid]);
+		s_KnifeAnimTimer[playerid] = 0;
+	}
+
 	if (s_DeathSkip[playerid]) {
 		DebugMessage(playerid, "Skipping death - class selection skipped");
 		SpawnPlayer(playerid);
@@ -3281,9 +3315,19 @@ public OnPlayerDeath(playerid, killerid, WEAPON:reason)
 		}
 	#endif
 
+	if (s_DelayedDeathTimer[playerid]) {
+		KillTimer(s_DelayedDeathTimer[playerid]);
+		s_DelayedDeathTimer[playerid] = 0;
+	}
+
 	if (s_DeathTimer[playerid]) {
 		KillTimer(s_DeathTimer[playerid]);
 		s_DeathTimer[playerid] = 0;
+	}
+
+	if (s_CbugTimeout[playerid]) {
+		KillTimer(s_CbugTimeout[playerid]);
+		s_CbugTimeout[playerid] = 0;
 	}
 
 	if (s_BeingResynced[playerid] || s_ForceClassSelection[playerid]) {
@@ -3326,10 +3370,6 @@ public OnPlayerDeath(playerid, killerid, WEAPON:reason)
 	}
 
 	if (OnPlayerDamage(playerid, amount, killerid, reason, bodypart)) {
-		if (reason < WEAPON_UNARMED || reason > WEAPON_UNKNOWN) {
-			reason = WEAPON_UNKNOWN;
-		}
-
 		if (amount == 0.0) {
 			amount = s_PlayerHealth[playerid] + s_PlayerArmour[playerid];
 		}
@@ -3430,17 +3470,17 @@ public OnPlayerDeath(playerid, killerid, WEAPON:reason)
 	return 1;
 }
 
-static Float:AngleBetweenPoints(Float:x1, Float:y1, Float:x2, Float:y2);
-
 forward WC_CbugPunishment(playerid, WEAPON:weapon);
-public WC_CbugPunishment(playerid, WEAPON:weapon) {
-	FreezeSyncPacket(playerid, .toggle = false);
-	SetPlayerArmedWeapon(playerid, weapon);
+public WC_CbugPunishment(playerid, WEAPON:weapon)
+{
+	s_CbugTimeout[playerid] = 0;
 
-	if (!s_IsDying[playerid]) {
-		ClearAnimations(playerid, FORCE_SYNC:1);
-	}
+	FreezeSyncPacket(playerid, .toggle = false);
+	ClearAnimations(playerid, FORCE_SYNC:1);
+	SetPlayerArmedWeapon(playerid, weapon);
 }
+
+static Float:AngleBetweenPoints(Float:x1, Float:y1, Float:x2, Float:y2);
 
 public OnPlayerKeyStateChange(playerid, KEY:newkeys, KEY:oldkeys)
 {
@@ -3470,8 +3510,12 @@ public OnPlayerKeyStateChange(playerid, KEY:newkeys, KEY:oldkeys)
 				ApplyAnimation(playerid, animlib, animname, 4.1, true, false, false, false, 0, FORCE_SYNC:1);
 				FreezeSyncPacket(playerid, .toggle = true);
 				SetPlayerArmedWeapon(playerid, w);
-				SetTimerEx("WC_CbugPunishment", 600, false, "ii", playerid, GetPlayerWeapon(playerid));
 
+				if (s_CbugTimeout[playerid]) {
+					KillTimer(s_CbugTimeout[playerid]);
+				}
+
+				s_CbugTimeout[playerid] = SetTimerEx("WC_CbugPunishment", 600, false, "ii", playerid, GetPlayerWeapon(playerid));
 				s_CbugFroze[playerid] = tick;
 
 				new j = 0, Float:health, Float:armour;
@@ -3495,6 +3539,7 @@ public OnPlayerKeyStateChange(playerid, KEY:newkeys, KEY:oldkeys)
 
 								KillTimer(s_DelayedDeathTimer[i]);
 								s_DelayedDeathTimer[i] = 0;
+
 								ClearAnimations(i, FORCE_SYNC:1);
 								SetFakeFacingAngle(i, _);
 								FreezeSyncPacket(i, .toggle = false);
@@ -3967,8 +4012,11 @@ public OnPlayerGiveDamage(playerid, damagedid, Float:amount, WEAPON:weaponid, bo
 			new animlib[32] = "KNIFE", animname[32] = "KILL_Knife_Ped_Damage";
 			PlayerDeath(damagedid, animlib, animname, _, 5200);
 
-			SetTimerEx("WC_SecondKnifeAnim", 2200, false, "i", damagedid);
+			if (s_KnifeAnimTimer[damagedid]) {
+				KillTimer(s_KnifeAnimTimer[damagedid]);
+			}
 
+			s_KnifeAnimTimer[damagedid] = SetTimerEx("WC_SecondKnifeAnim", 2200, false, "i", damagedid);
 			WC_OnPlayerDeath(damagedid, playerid, weaponid);
 
 			DebugMessage(damagedid, "being knifed by %d", playerid);
@@ -3984,7 +4032,6 @@ public OnPlayerGiveDamage(playerid, damagedid, Float:amount, WEAPON:weaponid, bo
 
 			if (anim != 747 && anim != 748) {
 				DebugMessageRed(playerid, "applying knife anim for you too (current: %d)", anim);
-
 				forcesync = 1;
 			}
 
@@ -4185,7 +4232,6 @@ public OnPlayerTakeDamage(playerid, issuerid, Float:amount, WEAPON:weaponid, bod
 
 			if (s_KnifeTimeout[playerid]) {
 				KillTimer(s_KnifeTimeout[playerid]);
-
 				s_KnifeTimeout[playerid] = 0;
 			}
 
@@ -4239,7 +4285,6 @@ public OnPlayerTakeDamage(playerid, issuerid, Float:amount, WEAPON:weaponid, bod
 
 			if (anim != 747) {
 				DebugMessageRed(issuerid, "applying knife anim for you too (current: %d)", anim);
-
 				forcesync = 1;
 			}
 
@@ -5023,13 +5068,6 @@ static ScriptExit()
 	#else
 	for (new playerid = 0; playerid != MAX_PLAYERS; playerid++) {
 	#endif
-		#if WC_CUSTOM_VENDING_MACHINES
-			if (s_VendingUseTimer[playerid]) {
-				KillTimer(s_VendingUseTimer[playerid]);
-				s_VendingUseTimer[playerid] = 0;
-			}
-		#endif
-
 		// Put things back the way they were
 		SetPlayerTeam(playerid, s_PlayerTeam[playerid]);
 
@@ -5046,6 +5084,7 @@ static ScriptExit()
 
 		SetFakeHealth(playerid, 255);
 		SetFakeArmour(playerid, 255);
+		UpdatePlayerVirtualWorld(playerid);
 		FreezeSyncPacket(playerid, .toggle = false);
 		SetFakeFacingAngle(playerid, _);
 		SetHealthBarVisible(playerid, false);
@@ -5974,10 +6013,6 @@ static InflictDamage(playerid, Float:amount, issuerid = INVALID_PLAYER_ID, WEAPO
 	if (!OnPlayerDamage(playerid, amount, issuerid, weaponid, bodypart)) {
 		UpdateHealthBar(playerid, true);
 
-		if (weaponid < WEAPON_UNARMED || weaponid > WEAPON_UNKNOWN) {
-			weaponid = WEAPON_UNKNOWN;
-		}
-
 		#if WC_DEBUG
 			new Float:length = 0.0;
 
@@ -5998,10 +6033,6 @@ static InflictDamage(playerid, Float:amount, issuerid = INVALID_PLAYER_ID, WEAPO
 		#endif
 
 		return;
-	}
-
-	if (weaponid < WEAPON_UNARMED || weaponid > WEAPON_UNKNOWN) {
-		weaponid = WEAPON_UNKNOWN;
 	}
 
 	#if WC_DEBUG
@@ -6164,12 +6195,9 @@ static InflictDamage(playerid, Float:amount, issuerid = INVALID_PLAYER_ID, WEAPO
 }
 
 forward WC_DelayedDeath(playerid, issuerid, WEAPON:reason);
-public WC_DelayedDeath(playerid, issuerid, WEAPON:reason) {
-	if (s_DelayedDeathTimer[playerid]) {
-		KillTimer(s_DelayedDeathTimer[playerid]);
-		s_DelayedDeathTimer[playerid] = 0;
-	}
-
+public WC_DelayedDeath(playerid, issuerid, WEAPON:reason)
+{
+	s_DelayedDeathTimer[playerid] = 0;
 	WC_OnPlayerDeath(playerid, issuerid, reason);
 }
 
@@ -6182,6 +6210,11 @@ static PlayerDeath(playerid, animlib[32], animname[32], bool:anim_lock = false, 
 	if (s_DelayedDeathTimer[playerid]) {
 		KillTimer(s_DelayedDeathTimer[playerid]);
 		s_DelayedDeathTimer[playerid] = 0;
+	}
+
+	if (s_CbugTimeout[playerid]) {
+		KillTimer(s_CbugTimeout[playerid]);
+		s_CbugTimeout[playerid] = 0;
 	}
 
 	#if defined _INC_open_mp
@@ -6215,7 +6248,7 @@ static PlayerDeath(playerid, animlib[32], animname[32], bool:anim_lock = false, 
 	UpdateHealthBar(playerid, .forcesync = true);
 	FreezeSyncPacket(playerid, .toggle = freeze_sync);
 
-	if (respawn_time == -1) {
+	if (respawn_time < 0) {
 		respawn_time = s_RespawnTime;
 	}
 
@@ -6448,7 +6481,7 @@ static DamageFeedUpdate(playerid, bool:modified = false)
 
 static DamageFeedUpdateText(playerid)
 {
-	new buf[64 * WC_FEED_HEIGHT] = "";
+	new buf[64 * WC_FEED_HEIGHT] = "", damagedid = INVALID_PLAYER_ID;
 
 	for (new i = 0, weapon[32]; i < sizeof(s_DamageFeedHitsGiven[]); i++) {
 		if (!s_DamageFeedHitsGiven[playerid][i][e_Tick]) {
@@ -6460,6 +6493,8 @@ static DamageFeedUpdateText(playerid)
 		} else {
 			WC_GetWeaponName(s_DamageFeedHitsGiven[playerid][i][e_Weapon], weapon);
 		}
+
+		damagedid = s_DamageFeedHitsGiven[playerid][i][e_Issuer];
 
 		if (s_DamageFeedHitsGiven[playerid][i][e_Issuer] == INVALID_PLAYER_ID) {
 			format(
@@ -6479,7 +6514,7 @@ static DamageFeedUpdateText(playerid)
 				s_DamageFeedHitsGiven[playerid][i][e_Name],
 				weapon,
 				s_DamageFeedHitsGiven[playerid][i][e_Amount] + 0.009,
-				s_PlayerHealth[s_DamageFeedHitsGiven[playerid][i][e_Issuer]]
+				s_PlayerHealth[damagedid]
 			);
 		}
 	}
@@ -6496,6 +6531,11 @@ static DamageFeedUpdateText(playerid)
 	}
 
 	buf = "";
+	damagedid = s_Spectating[playerid];
+
+	if (damagedid == INVALID_PLAYER_ID) {
+		damagedid = playerid;
+	}
 
 	for (new i = 0, weapon[32]; i < sizeof(s_DamageFeedHitsTaken[]); i++) {
 		if (!s_DamageFeedHitsTaken[playerid][i][e_Tick]) {
@@ -6516,7 +6556,7 @@ static DamageFeedUpdateText(playerid)
 				buf,
 				weapon,
 				s_DamageFeedHitsTaken[playerid][i][e_Amount] + 0.009,
-				s_PlayerHealth[playerid]
+				s_PlayerHealth[damagedid]
 			);
 		} else {
 			format(
@@ -6527,7 +6567,7 @@ static DamageFeedUpdateText(playerid)
 				s_DamageFeedHitsTaken[playerid][i][e_Name],
 				weapon,
 				s_DamageFeedHitsTaken[playerid][i][e_Amount] + 0.009,
-				s_PlayerHealth[s_DamageFeedHitsGiven[playerid][i][e_Issuer]]
+				s_PlayerHealth[damagedid]
 			);
 		}
 	}
@@ -6639,8 +6679,8 @@ static DamageFeedRemoveHit(arr[WC_FEED_HEIGHT][E_DAMAGE_FEED_HIT], idx)
 
 static SaveSyncData(playerid)
 {
-	GetPlayerHealth(playerid, s_SyncData[playerid][e_Health]);
-	GetPlayerArmour(playerid, s_SyncData[playerid][e_Armour]);
+	s_SyncData[playerid][e_Health] = s_PlayerHealth[playerid];
+	s_SyncData[playerid][e_Armour] = s_PlayerArmour[playerid];
 
 	GetPlayerPos(playerid, s_SyncData[playerid][e_PosX], s_SyncData[playerid][e_PosY], s_SyncData[playerid][e_PosZ]);
 	GetPlayerFacingAngle(playerid, s_SyncData[playerid][e_PosA]);
@@ -6925,6 +6965,8 @@ static ClearAnimationsForPlayer(playerid, forplayerid)
 forward WC_SecondKnifeAnim(playerid);
 public WC_SecondKnifeAnim(playerid)
 {
+	s_KnifeAnimTimer[playerid] = 0;
+
 	new animlib[] = "KNIFE", animname[] = "KILL_Knife_Ped_Die";
 	ApplyAnimation(playerid, animlib, animname, 4.1, false, true, true, true, 3000, FORCE_SYNC:1);
 }
@@ -7031,7 +7073,17 @@ public OnPlayerDamageDone(playerid, Float:amount, issuerid, WEAPON:weapon, bodyp
 
 public OnPlayerDamage(&playerid, &Float:amount, &issuerid, &WEAPON:weapon, &bodypart)
 {
-	return WC_OnPlayerDamage(playerid, amount, issuerid, weapon, bodypart);
+	new retval = WC_OnPlayerDamage(playerid, amount, issuerid, weapon, bodypart);
+
+	if (issuerid < 0 || issuerid >= MAX_PLAYERS) {
+		issuerid = INVALID_PLAYER_ID;
+	}
+
+	if (weapon < WEAPON_UNARMED || weapon > WEAPON_UNKNOWN) {
+		weapon = WEAPON_UNKNOWN;
+	}
+
+	return retval;
 }
 
 /*
