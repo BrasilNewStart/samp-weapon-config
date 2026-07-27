@@ -6808,7 +6808,7 @@ static SpawnPlayerForWorld(playerid)
 
 	new BitStream:bs = BS_New();
 
-	BS_WriteValue(bs, PR_UINT32, playerid);
+	BS_WriteValue(bs, PR_UINT32, playerid, PR_UINT32, 2);
 
 	#if defined _Y_ITERATE_LOCAL_VERSION || defined _FOREACH_LOCAL_VERSION
 	foreach (new i : Player) {
