@@ -1973,16 +1973,13 @@ stock WC_SetPlayerHealth(playerid, Float:health, Float:armour = -1.0)
 	}
 
 	if (health <= 0.0) {
-		if (IsPlayerNPC(playerid)) {
-			s_PlayerArmour[playerid] = 0.0;
-			s_PlayerHealth[playerid] = 0.0;
+		s_PlayerArmour[playerid] = 0.0;
+		s_PlayerHealth[playerid] = 0.0;
 
+		if (IsPlayerNPC(playerid)) {
 			UpdateHealthBar(playerid, true);
-		} else if (WC_IsPlayerSpawned(playerid)) {
-			InflictDamage(playerid, 0.0);
 		} else {
-			s_PlayerArmour[playerid] = 0.0;
-			s_PlayerHealth[playerid] = 0.0;
+			InflictDamage(playerid, 0.0);
 		}
 	} else {
 		if (armour >= 0.0) {
