@@ -3272,8 +3272,8 @@ public OnPlayerRequestClass(playerid, classid)
 			new Float:x, Float:y, Float:z;
 			GetPlayerPos(playerid, x, y, z);
 
-			RemoveBuildingForPlayer(playerid, 1484, x, y, z, 350.0),
-			RemoveBuildingForPlayer(playerid, 1485, x, y, z, 350.0),
+			RemoveBuildingForPlayer(playerid, 1484, x, y, z, 350.0);
+			RemoveBuildingForPlayer(playerid, 1485, x, y, z, 350.0);
 			RemoveBuildingForPlayer(playerid, 1486, x, y, z, 350.0);
 
 			s_InClassSelection[playerid] = true;
@@ -3970,24 +3970,13 @@ public OnPlayerGiveDamage(playerid, damagedid, Float:amount, WEAPON:weaponid, bo
 				SetPlayerArmedWeapon(playerid, w);
 
 				return 0;
-			} else {
-				new Float:x, Float:y, Float:z;
-				GetPlayerPos(playerid, x, y, z);
-
-				if (GetPlayerDistanceFromPoint(damagedid, x, y, z) > s_WeaponRange[weaponid] + 2.0) {
-					if (s_KnifeTimeout[damagedid]) {
-						KillTimer(s_KnifeTimeout[damagedid]);
-					}
-
-					s_KnifeTimeout[damagedid] = SetTimerEx("WC_SpawnForStreamedIn", 150, false, "i", damagedid);
-					ClearAnimations(playerid, FORCE_SYNC:1);
-					SetPlayerArmedWeapon(playerid, w);
-
-					return 0;
-				}
 			}
 
-			if (!OnPlayerDamage(damagedid, amount, playerid, weaponid, bodypart)) {
+			new Float:x, Float:y, Float:z;
+			GetPlayerPos(playerid, x, y, z);
+
+			if (GetPlayerDistanceFromPoint(damagedid, x, y, z) > s_WeaponRange[weaponid] + 2.0
+			|| !OnPlayerDamage(damagedid, amount, playerid, weaponid, bodypart)) {
 				if (s_KnifeTimeout[damagedid]) {
 					KillTimer(s_KnifeTimeout[damagedid]);
 				}
@@ -4236,18 +4225,13 @@ public OnPlayerTakeDamage(playerid, issuerid, Float:amount, WEAPON:weaponid, bod
 				ResyncPlayer(playerid);
 
 				return 0;
-			} else {
-				new Float:x, Float:y, Float:z;
-				GetPlayerPos(issuerid, x, y, z);
-
-				if (GetPlayerDistanceFromPoint(playerid, x, y, z) > s_WeaponRange[weaponid] + 2.0) {
-					ResyncPlayer(playerid);
-
-					return 0;
-				}
 			}
 
-			if (!OnPlayerDamage(playerid, amount, issuerid, weaponid, bodypart)) {
+			new Float:x, Float:y, Float:z;
+			GetPlayerPos(issuerid, x, y, z);
+
+			if (GetPlayerDistanceFromPoint(playerid, x, y, z) > s_WeaponRange[weaponid] + 2.0
+			|| !OnPlayerDamage(playerid, amount, issuerid, weaponid, bodypart)) {
 				ResyncPlayer(playerid);
 
 				return 0;
@@ -5681,7 +5665,7 @@ static ProcessDamage(&playerid, &issuerid, &Float:amount, &WEAPON:weaponid, &bod
 			dist = GetPlayerDistanceFromPoint(playerid, x, y, z);
 
 			if (dist > 15.0) {
-				AddRejectedHit(issuerid, playerid, HIT_TOO_FAR_FROM_ORIGIN, WEAPON:weaponid, _:dist);
+				AddRejectedHit(issuerid, playerid, HIT_TOO_FAR_FROM_ORIGIN, weaponid, _:dist);
 				return WC_INVALID_DISTANCE;
 			}
 		}
@@ -5689,8 +5673,8 @@ static ProcessDamage(&playerid, &issuerid, &Float:amount, &WEAPON:weaponid, &bod
 
 	// Only torso from non-bullet weapons
 	if (!IsBulletWeapon(weaponid)
-		&& !(WEAPON_VEHICLE_M4 <= weaponid <= WEAPON_VEHICLE_MINIGUN)
-		&& bodypart != 3) {
+	&& !(WEAPON_VEHICLE_M4 <= weaponid <= WEAPON_VEHICLE_MINIGUN)
+	&& bodypart != 3) {
 		return WC_INVALID_DAMAGE;
 	}
 
@@ -5721,11 +5705,11 @@ static ProcessDamage(&playerid, &issuerid, &Float:amount, &WEAPON:weaponid, &bod
 
 			if (weaponid == WEAPON_CARPARK) {
 				if (dist > 15.0) {
-					AddRejectedHit(issuerid, playerid, HIT_TOO_FAR_FROM_ORIGIN, WEAPON:weaponid, _:dist);
+					AddRejectedHit(issuerid, playerid, HIT_TOO_FAR_FROM_ORIGIN, weaponid, _:dist);
 					return WC_INVALID_DISTANCE;
 				}
 			} else if (dist > s_WeaponRange[weaponid] + 2.0) {
-				AddRejectedHit(issuerid, playerid, HIT_TOO_FAR_FROM_ORIGIN, WEAPON:weaponid, _:dist, _:s_WeaponRange[weaponid]);
+				AddRejectedHit(issuerid, playerid, HIT_TOO_FAR_FROM_ORIGIN, weaponid, _:dist, _:s_WeaponRange[weaponid]);
 				return WC_INVALID_DISTANCE;
 			}
 		}
@@ -5861,7 +5845,7 @@ static ProcessDamage(&playerid, &issuerid, &Float:amount, &WEAPON:weaponid, &bod
 		new WEAPON:reason = (weaponid == WEAPON_PISTOLWHIP) ? WEAPON_UNARMED : weaponid;
 
 		if (_:WEAPON_UNARMED <= _:reason < sizeof(s_WeaponRange) && dist > s_WeaponRange[reason] + 2.0) {
-			AddRejectedHit(issuerid, playerid, HIT_TOO_FAR_FROM_ORIGIN, WEAPON:weaponid, _:dist, _:s_WeaponRange[reason]);
+			AddRejectedHit(issuerid, playerid, HIT_TOO_FAR_FROM_ORIGIN, weaponid, _:dist, _:s_WeaponRange[reason]);
 			return WC_INVALID_DISTANCE;
 		}
 	}
@@ -7005,7 +6989,7 @@ public OnInvalidWeaponDamage(playerid, damagedid, Float:amount, WEAPON:weaponid,
 {
 	DebugMessageRedAll("OnInvalidWeaponDamage(%d, %d, %f, %d, %d, %d, %d)", playerid, damagedid, amount, weaponid, bodypart, error, given);
 
-	WC_OnInvalidWeaponDamage(playerid, damagedid, Float:amount, weaponid, bodypart, error, bool:given);
+	WC_OnInvalidWeaponDamage(playerid, damagedid, amount, weaponid, bodypart, error, given);
 }
 
 public OnPlayerDamageDone(playerid, Float:amount, issuerid, WEAPON:weapon, bodypart)
