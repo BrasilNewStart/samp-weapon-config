@@ -6685,8 +6685,8 @@ static SaveSyncData(playerid)
 
 	s_SyncData[playerid][e_Weapon] = GetPlayerWeapon(playerid);
 
-	for (new WEAPON_SLOT:i; _:i < 13; i++) {
-		GetPlayerWeaponData(playerid, i, s_SyncData[playerid][e_WeaponId][i], s_SyncData[playerid][e_WeaponAmmo][i]);
+	for (new i = 0; i < 13; i++) {
+		GetPlayerWeaponData(playerid, WEAPON_SLOT:i, s_SyncData[playerid][e_WeaponId][i], s_SyncData[playerid][e_WeaponAmmo][i]);
 	}
 }
 
