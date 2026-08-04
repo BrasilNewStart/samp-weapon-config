@@ -1345,13 +1345,15 @@ stock GetHealthBarPadding(Float:padding[4], playerid = INVALID_PLAYER_ID)
 {
 	if (0 <= playerid < MAX_PLAYERS) {
 		for (new i = 0; i < sizeof(padding); i++) {
-			padding[i] = s_PlayerHealthBarPadding[playerid][i] == s_PlayerHealthBarPadding[playerid][i] ? s_PlayerHealthBarPadding[playerid][i] : s_HealthBarPadding[i];
+			padding[i] = s_PlayerHealthBarPadding[playerid][i];
+
+			if (padding[i] != padding[i]) {
+				padding[i] = s_HealthBarPadding[i];
+			}
 		}
-
-		return;
+	} else {
+		padding = s_HealthBarPadding;
 	}
-
-	padding = s_HealthBarPadding;
 }
 
 stock SetHealthBarPosition(Float:x, Float:y)
@@ -1443,6 +1445,7 @@ stock SetHealthBarSizeForPlayer(playerid, Float:x = Float:0x7FFFFFFF, Float:y = 
 
 		return 1;
 	}
+
 	return 0;
 }
 
@@ -1459,37 +1462,36 @@ stock SetHealthBarPaddingForPlayer(playerid, const Float:padding[4] = {Float:0x7
 
 		return 1;
 	}
+
 	return 0;
 }
 
 stock GetHealthBarColor(&borderColor = 0, &bgColor = 0, &fgColor = 0, playerid = INVALID_PLAYER_ID)
 {
 	if (0 <= playerid < MAX_PLAYERS) {
-		borderColor = s_PlayerHealthBarBorderColor[playerid] != 0 ? s_PlayerHealthBarBorderColor[playerid] : s_HealthBarBorderColor;
-		bgColor = s_PlayerHealthBarBGColor[playerid] != 0 ? s_PlayerHealthBarBGColor[playerid] : s_HealthBarBGColor;
-		fgColor = s_PlayerHealthBarFGColor[playerid] != 0 ? s_PlayerHealthBarFGColor[playerid] : s_HealthBarFGColor;
-
-		return;
+		borderColor = s_PlayerHealthBarBorderColor[playerid] ? s_PlayerHealthBarBorderColor[playerid] : s_HealthBarBorderColor;
+		bgColor = s_PlayerHealthBarBGColor[playerid] ? s_PlayerHealthBarBGColor[playerid] : s_HealthBarBGColor;
+		fgColor = s_PlayerHealthBarFGColor[playerid] ? s_PlayerHealthBarFGColor[playerid] : s_HealthBarFGColor;
+	} else {
+		borderColor = s_HealthBarBorderColor;
+		bgColor = s_HealthBarBGColor;
+		fgColor = s_HealthBarFGColor;
 	}
-
-	borderColor = s_HealthBarBorderColor;
-	bgColor = s_HealthBarBGColor;
-	fgColor = s_HealthBarFGColor;
 }
 
 stock SetHealthBarColor(borderColor = 0, bgColor = 0, fgColor = 0)
 {
-	if (borderColor != 0) {
+	if (borderColor) {
 		s_HealthBarBorderColor = borderColor;
 	}
 
-	if (fgColor != 0) {
+	if (fgColor) {
 		s_HealthBarFGColor = fgColor;
 	}
 
-	if (bgColor != 0) {
+	if (bgColor) {
 		s_HealthBarBGColor = bgColor;
-	} else if (fgColor != 0) {
+	} else if (fgColor) {
 		s_HealthBarBGColor = DarkenRGBA(s_HealthBarFGColor);
 	}
 
@@ -1512,7 +1514,7 @@ stock SetHealthBarColorForPlayer(playerid, borderColor = 0, bgColor = 0, fgColor
 		s_PlayerHealthBarBorderColor[playerid] = borderColor;
 		s_PlayerHealthBarFGColor[playerid] = fgColor;
 
-		if (bgColor == 0 && s_PlayerHealthBarFGColor[playerid] != 0) {
+		if (!bgColor && s_PlayerHealthBarFGColor[playerid]) {
 			s_PlayerHealthBarBGColor[playerid] = DarkenRGBA(s_PlayerHealthBarFGColor[playerid]);
 		} else {
 			s_PlayerHealthBarBGColor[playerid] = bgColor;
@@ -1522,8 +1524,10 @@ stock SetHealthBarColorForPlayer(playerid, borderColor = 0, bgColor = 0, fgColor
 			SetHealthBarVisible(playerid, false);
 			SetHealthBarVisible(playerid, true);
 		}
+
 		return 1;
 	}
+
 	return 0;
 }
 
