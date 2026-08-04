@@ -4980,9 +4980,14 @@ static ScriptInit()
 	#else
 	for (new playerid = 0; playerid != MAX_PLAYERS; playerid++) {
 	#endif
+		SetFakeHealth(playerid, 255);
+		SetFakeArmour(playerid, 255);
+
 		s_PlayerTeam[playerid] = GetPlayerTeam(playerid);
 
 		SetPlayerTeam(playerid, s_PlayerTeam[playerid]);
+		FreezeSyncPacket(playerid, .toggle = false);
+		SetFakeFacingAngle(playerid, _);
 		DamageFeedUpdate(playerid);
 
 		worldid = GetPlayerVirtualWorld(playerid);
@@ -5001,6 +5006,15 @@ static ScriptInit()
 		s_TrueDeath[playerid] = true;
 		s_InClassSelection[playerid] = true;
 		s_PlayerFallbackSpawnInfo[playerid][e_Skin] = -1;
+
+		s_PlayerHealthBarPos[playerid][0] = Float:0x7FFFFFFF;
+		s_PlayerHealthBarPos[playerid][1] = Float:0x7FFFFFFF;
+		s_PlayerHealthBarSize[playerid][0] = Float:0x7FFFFFFF;
+		s_PlayerHealthBarSize[playerid][1] = Float:0x7FFFFFFF;
+		s_PlayerHealthBarPadding[playerid][0] = Float:0x7FFFFFFF;
+		s_PlayerHealthBarPadding[playerid][1] = Float:0x7FFFFFFF;
+		s_PlayerHealthBarPadding[playerid][2] = Float:0x7FFFFFFF;
+		s_PlayerHealthBarPadding[playerid][3] = Float:0x7FFFFFFF;
 
 		#if WC_CUSTOM_VENDING_MACHINES
 			s_AlreadyConnected[playerid] = true;
