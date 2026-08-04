@@ -1628,8 +1628,7 @@ stock SetCustomFallDamage(bool:toggle, Float:damage_multiplier = 25.0, Float:dea
 	s_CustomFallDamage = toggle;
 
 	if (toggle) {
-		// WEAPON_COLLISION instead of magic number causes tag mismatch with omp-stdlib
-		s_WeaponDamage[54] = damage_multiplier;
+		s_WeaponDamage[WEAPON_COLLISION] = damage_multiplier;
 		s_FallDeathVelocity = -floatabs(death_velocity);
 	}
 }
