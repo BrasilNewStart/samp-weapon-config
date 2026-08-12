@@ -988,7 +988,7 @@ static Float:s_PlayerMaxArmour[MAX_PLAYERS] = {100.0, ...};
 static Float:s_PlayerArmour[MAX_PLAYERS] = {0.0, ...};
 static s_LastSentHealth[MAX_PLAYERS];
 static s_LastSentArmour[MAX_PLAYERS];
-static bool:s_DamageArmourToggle[2] = {false, ...};
+static bool:s_DamageArmourToggle[2 char];
 static WEAPON:s_LastExplosive[MAX_PLAYERS] = {WEAPON_UNARMED, ...};
 static s_PlayerTeam[MAX_PLAYERS] = {NO_TEAM, ...};
 static s_Spectating[MAX_PLAYERS] = {INVALID_PLAYER_ID, ...};
@@ -999,8 +999,8 @@ static s_LastVehicleTick[MAX_PLAYERS];
 static Float:s_HealthBarPos[2] = {546.0, 66.7};
 static Float:s_HealthBarSize[2] = {61.7, 8.4};
 static Float:s_HealthBarPadding[4] = {2.1, 1.9, 1.6, 2.0};
-static bool:s_EnableHealthBar[MAX_PLAYERS char] = {true, ...};
-static bool:s_HealthBarVisible[MAX_PLAYERS char] = {false, ...};
+static bool:s_EnableHealthBar[MAX_PLAYERS char];
+static bool:s_HealthBarVisible[MAX_PLAYERS char];
 static PlayerText:s_HealthBarBorder[MAX_PLAYERS] = {PlayerText:INVALID_TEXT_DRAW, ...};
 static PlayerText:s_HealthBarBackground[MAX_PLAYERS] = {PlayerText:INVALID_TEXT_DRAW, ...};
 static PlayerText:s_HealthBarForeground[MAX_PLAYERS] = {PlayerText:INVALID_TEXT_DRAW, ...};
@@ -1039,7 +1039,7 @@ static s_LastStopTick[MAX_PLAYERS];
 
 static bool:s_CbugGlobal = true;
 static bool:s_CbugDeathDelay = true;
-static bool:s_CbugAllowed[MAX_PLAYERS char] = {true, ...};
+static bool:s_CbugAllowed[MAX_PLAYERS char];
 static s_CbugFroze[MAX_PLAYERS];
 static s_CbugTimeout[MAX_PLAYERS];
 
@@ -1066,7 +1066,7 @@ static Float:s_DamageDoneArmour[MAX_PLAYERS];
 
 #if WC_CUSTOM_VENDING_MACHINES
 	static bool:s_AlreadyConnected[MAX_PLAYERS char];
-	static bool:s_FirstSpawn[MAX_PLAYERS char] = {true, ...};
+	static bool:s_FirstSpawn[MAX_PLAYERS char];
 	static bool:s_CustomVendingMachines = true;
 	#if WC_USE_STREAMER
 		static STREAMER_TAG_OBJECT:s_VendingMachineObject[sizeof(sc_VendingMachines)] = {STREAMER_TAG_OBJECT:INVALID_STREAMER_ID, ...};
@@ -1080,8 +1080,8 @@ static s_DamageRangeSteps[55];
 static Float:s_DamageRangeRanges[55][WC_MAX_DAMAGE_RANGES];
 static Float:s_DamageRangeValues[55][WC_MAX_DAMAGE_RANGES];
 
-static bool:s_IsDying[MAX_PLAYERS char] = {false, ...};
-static bool:s_TrueDeath[MAX_PLAYERS char] = {true, ...};
+static bool:s_IsDying[MAX_PLAYERS char];
+static bool:s_TrueDeath[MAX_PLAYERS char];
 static s_RespawnTime = 3000;
 static s_World[MAX_PLAYERS];
 static s_LastDeathTick[MAX_PLAYERS];
@@ -1106,7 +1106,7 @@ static s_SyncData[MAX_PLAYERS][E_RESYNC_DATA];
 
 static s_VehiclePassengerDamage = false;
 static s_VehicleUnoccupiedDamage = false;
-static bool:s_VehicleAlive[MAX_VEHICLES char] = {false, ...};
+static bool:s_VehicleAlive[MAX_VEHICLES char];
 static s_LastVehicleShooter[MAX_VEHICLES] = {INVALID_PLAYER_ID, ...};
 static s_VehicleRespawnTimer[MAX_VEHICLES];
 
@@ -1589,8 +1589,8 @@ stock Float:GetWeaponDamage(WEAPON:weaponid)
 
 stock SetCustomArmourRules(bool:armour_rules, bool:torso_rules = false)
 {
-	s_DamageArmourToggle[0] = armour_rules;
-	s_DamageArmourToggle[1] = torso_rules;
+	s_DamageArmourToggle{0} = armour_rules;
+	s_DamageArmourToggle{1} = torso_rules;
 }
 
 stock SetWeaponArmourRule(WEAPON:weaponid, bool:affects_armour, bool:torso_only = false)
@@ -4111,7 +4111,7 @@ public OnPlayerGiveDamage(playerid, damagedid, Float:amount, WEAPON:weaponid, bo
 		}
 	}
 
-	new valid = true;
+	new bool:valid = true;
 
 	if (GetPlayerState(playerid) == PLAYER_STATE_DRIVER) {
 		if (WEAPON_UZI <= weaponid <= WEAPON_MP5 || weaponid == WEAPON_TEC9) {
@@ -5019,6 +5019,8 @@ static ScriptInit()
 		s_LastStopTick[playerid] = tick;
 		s_LastVehicleEnterTime[playerid] = 0;
 		s_PlayerFallbackSpawnInfo[playerid][e_Skin] = -1;
+		s_CbugAllowed{playerid} = s_CbugGlobal;
+		s_EnableHealthBar{playerid} = true; // enable by default
 
 		s_PlayerHealthBarPos[playerid][0] = Float:0x7FFFFFFF;
 		s_PlayerHealthBarPos[playerid][1] = Float:0x7FFFFFFF;
@@ -5031,6 +5033,7 @@ static ScriptInit()
 
 		#if WC_CUSTOM_VENDING_MACHINES
 			s_AlreadyConnected{playerid} = true;
+			s_FirstSpawn{playerid} = true;
 
 			RemoveDefaultVendingMachines(playerid);
 		#endif
@@ -6069,7 +6072,7 @@ static InflictDamage(playerid, Float:amount, issuerid = INVALID_PLAYER_ID, WEAPO
 	#endif
 
 	new bool:hit_armour = (!ignore_armour && weaponid != WEAPON_COLLISION && weaponid != WEAPON_DROWN && weaponid != WEAPON_CARPARK && weaponid != WEAPON_UNKNOWN
-	&& (!s_DamageArmourToggle[0] || s_DamageArmour[weaponid][0] && (!s_DamageArmourToggle[1] || s_DamageArmour[weaponid][1] && bodypart == 3 || !s_DamageArmour[weaponid][1])));
+	&& (!s_DamageArmourToggle{0} || s_DamageArmour[weaponid][0] && (!s_DamageArmourToggle{1} || s_DamageArmour[weaponid][1] && bodypart == 3 || !s_DamageArmour[weaponid][1])));
 
 	if (hit_armour) {
 		if (amount <= 0.0) {
@@ -6446,7 +6449,7 @@ static DamageFeedUpdate(playerid, bool:modified = false)
 			break;
 		}
 
-		if (s_DamageFeedHitsGiven[playerid][i][e_Tick] < lowest_tick) {
+		if (s_DamageFeedHitsGiven[playerid][i][e_Tick] - lowest_tick < 0) {
 			lowest_tick = s_DamageFeedHitsGiven[playerid][i][e_Tick];
 		}
 	}
@@ -6466,7 +6469,7 @@ static DamageFeedUpdate(playerid, bool:modified = false)
 			break;
 		}
 
-		if (s_DamageFeedHitsTaken[playerid][i][e_Tick] < lowest_tick) {
+		if (s_DamageFeedHitsTaken[playerid][i][e_Tick] - lowest_tick < 0) {
 			lowest_tick = s_DamageFeedHitsTaken[playerid][i][e_Tick];
 		}
 	}
