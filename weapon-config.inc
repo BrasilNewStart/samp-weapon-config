@@ -2913,7 +2913,7 @@ public OnPlayerConnect(playerid)
 		s_FakeHealth{playerid} = 255;
 		s_FakeArmour{playerid} = 255;
 		s_TempDataWritten{playerid} = false;
-		s_SyncDataFrozen[playerid] = false;
+		s_SyncDataFrozen{playerid} = false;
 		s_GogglesUsed[playerid] = 0;
 	#endif
 
