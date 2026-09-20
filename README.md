@@ -10,9 +10,9 @@ It's pretty much plug-and-play if you don't have any filterscripts that interfer
 2. Replace `OnPlayerGiveDamage` and `OnPlayerTakeDamage` with just one callback:
     
     ```pawn
-    public OnPlayerDamage(&playerid, &Float:amount, &issuerid, &WEAPON:weapon, &bodypart)
+    public OnPlayerDamage(&playerid, &Float:amount, &issuerid, &weapon, &bodypart)
     ```
-3. Add config functions in `OnGameModeInit` (or any other places, they can be called at any time).  
+3. Add config functions in `OnGameModeInit` (or any other places, they can be called at any time).
     **Recommended**:
     
     ```pawn
@@ -24,9 +24,7 @@ It's pretty much plug-and-play if you don't have any filterscripts that interfer
 
 ## Requirements
 
-This include file requires [SKY](https://github.com/oscar-broman/SKY/) or [Pawn.RakNet](https://github.com/katursis/Pawn.RakNet/) plugin.
-
-**Note:** SKY has a higher priority if the user has not included any of these dependencies before weapon-config (it will automatically try to include SKY and only then Pawn.RakNet, if fail with the first). Also, SKY will take precedence if both dependencies are included (it will use SKY plugin instead of Pawn.RakNet).
+This include file requires the [SKY](https://github.com/oscar-broman/SKY/) plugin.
 
 # Features
 
@@ -44,7 +42,6 @@ This include file requires [SKY](https://github.com/oscar-broman/SKY/) or [Pawn.
     - `WEAPON_PISTOLWHIP` - When you punch someone with a gun
     - `WEAPON_VEHICLE_M4` - Vehicles with M4 guns (e.g. Rustler)
     - `WEAPON_VEHICLE_MINIGUN` - Vehicles with miniguns (e.g. Hunter)
-    - `WEAPON_VEHICLE_ROCKETLAUNCHER` - Vehicles with projectiles (e.g. Rhino)
     - `WEAPON_HELIBLADES` - Helikill
     - `WEAPON_CARPARK` - When you park your car on someone
 - **Extensive sanity checking on shots:**
@@ -75,7 +72,7 @@ All players are given infinite health and set to the same team. Damage is counte
 
 The players healthbars are modified by editing SA-MP packets, so they are very responsive.
 
-The death animations are applied as "forcesync" and even the facing angle is force synced (with SKY or Pawn.RakNet). This allows perfect animations even for laggy/paused players.
+The death animations are applied as "forcesync" and even the facing angle is force synced (with SKY). This allows perfect animations even for laggy/paused players.
 
 The *real* `OnPlayerDeath` is never called from the SA-MP server (only in some rare cases). A player never actually dies in their game - they just see a death animation applied and get respawned.
 
@@ -110,9 +107,9 @@ CallRemoteFunction("SetHealth", "if", playerid, health);
 ### New callbacks
 
 ```pawn
-public OnPlayerDamage(&playerid, &Float:amount, &issuerid, &WEAPON:weapon, &bodypart)
+public OnPlayerDamage(&playerid, &Float:amount, &issuerid, &weapon, &bodypart)
 ```
-Called when damage is about to be inflicted on a player, not called on NPCs  
+Called when damage is about to be inflicted on a player
 Most arguments can be modified (e.g. the damage could be adjusted)
 * `playerid` - The player who is about to get damaged
 * `amount` - The amount of damage about to get inflicted (0.0 means all HP)
@@ -124,9 +121,10 @@ Most arguments can be modified (e.g. the damage could be adjusted)
 Return 0 to prevent the damage from being inflicted
 
 ```pawn
-public OnPlayerDamageDone(playerid, Float:amount, issuerid, WEAPON:weapon, bodypart)
+public OnPlayerDamageDone(playerid, Float:amount, issuerid, weapon, bodypart)
 ```
-Called after damage has been inflicted, called on NPCs  
+Called after damage has been inflicted
+
 Same parameters as above, but they can not be modified
 
 Return value ignored
@@ -135,6 +133,7 @@ Return value ignored
 public OnPlayerPrepareDeath(playerid, animlib[32], animname[32], &anim_lock, &respawn_time)
 ```
 Before the death animation is applied
+
 * `playerid` - The player that is about to die
 * `animlib` - The anim lib to play (change to empty string for no animation)
 * `animname` - The anim name to play
@@ -147,6 +146,7 @@ Return value ignored
 public OnPlayerDeathFinished(playerid)
 ```
 When the death animation has finished and the player has been sent to respawn
+
 * `playerid` - The player
 
 Return value ignored
@@ -154,15 +154,16 @@ Return value ignored
 ```pawn
 public OnRejectedHit(playerid, hit[E_REJECTED_HIT])
 ```
-When a shot or damage given is rejected  
+When a shot or damage given is rejected
 See E_REJECTED_HIT and GetRejectedHit for more
+
 * `playerid` - The player whose hit was rejected
 * `hit` - An enum containing information about the rejected hit
 
 Return value ignored
 
 ```pawn
-public OnInvalidWeaponDamage(playerid, damagedid, Float:amount, WEAPON:weaponid, bodypart, error, bool:given)
+public OnInvalidWeaponDamage(playerid, damagedid, Float:amount, weaponid, bodypart, error, bool:given)
 ```
 When a player takes or gives invalid damage (WC_* errors above)
 * `playerid` - The player that inflicted the damage
@@ -181,12 +182,12 @@ Return value ignored
 ```pawn
 AverageShootRate(playerid, shots, &multiple_weapons = 0);
 ```
-The average time (in milliseconds) between shots
+The average time (in milliseconds) between shots.
 * `playerid` - The player
 * `hits` - Number of hits to average on (max 10)
 * `multiple_weapons` - Will be set to 1 if different weapons were used in the last shots
 
-Returns -1 if there is not enough data to calculate the rate, otherwise the average time is returned
+Returns -1 if there is not enough data to calculate the rate, otherwise the average time is returned.
 
 ```pawn
 AverageHitRate(playerid, hits, &multiple_weapons = 0);
@@ -194,11 +195,11 @@ AverageHitRate(playerid, hits, &multiple_weapons = 0);
 Same as above, but for hits inflicted with `OnPlayerGiveDamage`
 
 ```pawn
-DamagePlayer(playerid, Float:amount, issuerid = INVALID_PLAYER_ID, WEAPON:weaponid = WEAPON_UNKNOWN, bodypart = BODY_PART_UNKNOWN, bool:ignore_armour = false);
+DamagePlayer(playerid, Float:amount, issuerid = INVALID_PLAYER_ID, weaponid = WEAPON_UNKNOWN, bodypart = BODY_PART_UNKNOWN, bool:ignore_armour = false);
 ```
-Inflict a hit on a player. All callbacks except `OnPlayerWeaponShot` will be called  
+Inflict a hit on a player. All callbacks except `OnPlayerWeaponShot` will be called.  
 **Note:** do not use it inside OnPlayerDamage as you can just modify `amount` there
-* `ignore_armour` - When `true` will do damage straight to health, and not armour
+* `ignore_armour` - When `true` will do damage straight to health, and not armour.
 
 ```pawn
 Float:GetPlayerHealth(playerid, &Float:health = 0.0);
@@ -226,17 +227,17 @@ GetRespawnTime();
 Get the respawn time
 
 ```pawn
-IsBulletWeapon(WEAPON:weaponid);
+IsBulletWeapon(weaponid);
 ```
 Returns true if the weapon shoots bullets
 
 ```pawn
-IsHighRateWeapon(WEAPON:weaponid);
+IsHighRateWeapon(weaponid);
 ```
 Returns true if the weapon's damage can be reported in high rates to the server (such as fire)
 
 ```pawn
-IsMeleeWeapon(WEAPON:weaponid);
+IsMeleeWeapon(weaponid);
 ```
 Returns true if it's a melee weapon (including `WEAPON_PISTOLWHIP`)
 
@@ -256,12 +257,12 @@ WC_IsPlayerPaused(playerid);
 Returns true if the player is paused (AFK) within last two seconds
 
 ```pawn
-GetWeaponName(WEAPON:weaponid, weapon[], len = sizeof(weapon));
+GetWeaponName(weaponid, weapon[], len = sizeof(weapon));
 ```
 Hooked version of the native, fixed and containing custom weapons (such as pistol whip)
 
 ```pawn
-ReturnWeaponName(WEAPON:weaponid);
+ReturnWeaponName(weaponid);
 ```
 Return the weapon name (uses the fixed GetWeaponName)
 
@@ -278,12 +279,12 @@ Toggle vending machines (they are removed and disabled by default)
 ```pawn
 SetCbugAllowed(bool:enabled, playerid = INVALID_PLAYER_ID);
 ```
-Toggle anti-cbug per player or globally (using no playerid param will default all users to default)
+Toggle anti-cbug per player or globally. (Using no playerid param will default all users to default)
 
 ```pawn
 bool:GetCbugAllowed(playerid = INVALID_PLAYER_ID);
 ```
-Check if users anti-cbug is toggled (using no playerid param will show the global toggle value)
+Check if users anti-cbug is toggled. (Using no playerid param will show the global toggle value)
 
 ```pawn
 SetDamageFeed(bool:toggle);
@@ -316,25 +317,26 @@ SetVehicleUnoccupiedDamage(bool:toggle);
 Allow vehicles to be damaged when they don't have any players inside them
 
 ```pawn
-SetWeaponDamage(WEAPON:weaponid, damage_type, Float:amount, Float:...);
+SetWeaponDamage(weaponid, damage_type, Float:amount, Float:...);
 ```
 Modify a weapon's damage
 * `weaponid` - The weapon to modify
 * `damage_type` - One of the following:
-    * `DAMAGE_TYPE_MULTIPLIER`  
-        Multiply the original damage inflicted by amount  
+    * DAMAGE_TYPE_MULTIPLIER
+        Multiply the original damage inflicted by amount
         This is default for melee, grenades, and other weapons that
         inflict different amounts of damage (shotguns excluded)
-    * `DAMAGE_TYPE_STATIC`  
-        Inflict a specific amount of damage for each hit  
-        For shotguns, this modifies the value for each bullet that hit the player  
+    * DAMAGE_TYPE_STATIC
+        Inflict a specific amount of damage for each hit
+        For shotguns, this modifies the value for each bullet that hit the player
         Combat shotgun shoots 8 bullets, other shotguns shoot 15
-    * `DAMAGE_TYPE_RANGE_MULTIPLIER`  
+    * DAMAGE_TYPE_RANGE_MULTIPLIER
         Same as DAMAGE_TYPE_MULTIPLIER, but the damage depends on the distance
-    * `DAMAGE_TYPE_RANGE`  
+    * DAMAGE_TYPE_RANGE
         Same as DAMAGE_TYPE_STATIC, but the damage depends on the distance
 * `amount` - The amount of damage
-* `...` - If `damage_type` contains `RANGE`, the arguments should be a list of ranges and damage, for example:
+* `...` - If `damage_type` contains `RANGE`, the arguments should be a list of ranges and damage
+    For example:
     ```pawn
     SetWeaponDamage(WEAPON_SNIPER, DAMAGE_TYPE_RANGE, 40.0, 20.0, 30.0, 60.0, 20.0);
     ```
@@ -344,60 +346,49 @@ Modify a weapon's damage
     * `20` for any other distance
 
 ```pawn
-Float:GetWeaponDamage(WEAPON:weaponid);
+Float:GetWeaponDamage(weaponid);
 ```
 Get the amount of damage of a weapon
 
 ```pawn
-SetWeaponMaxRange(WEAPON:weaponid, Float:range);
+SetWeaponMaxRange(weaponid, Float:range);
 ```
-Set the max range of a weapon. The default value is those from weapon.dat  
+Set the max range of a weapon. The default value is those from weapon.dat
 Because of a SA-MP bug, weapons can (and will) exceed this range.
-This script, however, will block those out-of-range shots and give a rejected hit
+This script, however, will block those out-of-range shots and give a rejected hit.
 
 ```pawn
-Float:GetWeaponMaxRange(WEAPON:weaponid);
+Float:GetWeaponMaxRange(weaponid);
 ```
 Get the max range of a weapon
 
 ```pawn
-SetWeaponShootRate(WEAPON:weaponid, max_rate);
+SetWeaponShootRate(weaponid, max_rate);
 ```
-Set the max allowed shoot rate of a weapon  
-Could be used to prevent C-bug damage or allow infinite shooting if a script uses GivePlayerWeapon to do so
+Set the max allowed shoot rate of a weapon.
+Could be used to prevent C-bug damage or allow infinite shooting if a script uses GivePlayerWeapon to do so.
 
 ```pawn
-GetWeaponShootRate(WEAPON:weaponid);
+GetWeaponShootRate(weaponid);
 ```
 Get the max allowed shoot rate of a weapon
 
 ```pawn
 SetCustomArmourRules(bool:armour_rules, bool:torso_rules);
 ```
-Toggle the custom armour rules on and off. Both are disabled by default
-* `armour_rules` - Toggle all of the rules  
-  When off, nothing is affected. Armour is affected as it normally would  
-  When on, weapons can be set to either damage armour before health or just take health and never damage armour
-* `torso_rules` - Toggle all torso-only rules  
-  When off, all weapons will have effects no matter which bodypart is 'hit'  
-  When on, weapons with the `torso_only` rule (of `SetWeaponArmourRule`) on will only damage armour when the torso is 'hit'
-  (and when it's off, armour is damaged no matter which body part is 'hit')
+Toggle the custom armour rules on and off. Both are disabled by default.
+* `armour_rules` - Toggle all of the rules. When off, nothing is affected. Armour is affected as it normally would. When on, weapons can be set to either damage armour before health or just take health and never damage armour.
+* `torso_rules` - Toggle all torso-only rules. When off, all weapons will have effects no matter which bodypart is 'hit'. When on, weapons with the `torso_only` rule (of `SetWeaponArmourRule`) on will only damage armour when the torso is 'hit' (and when it's off, armour is damaged no matter which body part is 'hit').
 
 ```pawn
-SetWeaponArmourRule(WEAPON:weaponid, bool:affects_armour, bool:torso_only);
+SetWeaponArmourRule(weaponid, bool:affects_armour, bool:torso_only);
 ```
-Set custom rules for a weapon. The defaults aren't going to comfort EVERYONE, so everyone needs the ability to modify the weapons themselves
-* `weaponid` - The ID of the weapon to modify the rules of
-* `affects_armour` - Whether this weapon will distribute damage over armour and health or just damage health directly
-* `torso_only` - Whether this weapon will only damage armour when the 'hit' bodypart is the torso or all bodyparts. Only works when `torso_rules` are enabled using `SetCustomArmourRules`
+Set custom rules for a weapon. The defaults aren't going to comfort EVERYONE, so everyone needs the ability to modify the weapons themselves.
+* `weaponid` - The ID of the weapon to modify the rules of.
+* `affects_armour` - Whether this weapon will distribute damage over armour and health or just damage health directly.
+* `torso_only` - Whether this weapon will only damage armour when the 'hit' bodypart is the torso or all bodyparts. Only works when `torso_rules` are enabled using `SetCustomArmourRules`.
 
 ```pawn
-EnableHealthBarForPlayer(playerid, bool:enable);
+EnableHealthBarForPlayer(playerid, bool:enable)
 ```
-Show or hide health bar for player
-
-```pawn
-SetCbugDeathDelay(bool:toggle);
-```
-
-Toggles a 1.2-second delay on player death to verify that the last shot was not fired using a cbug (enabled by default). This setting has no effect if cbug is allowed.
+Show or hide health bar for player.

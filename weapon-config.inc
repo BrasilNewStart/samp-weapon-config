@@ -6690,37 +6690,40 @@ static GetPlayerActualSkin(playerid)
 
 #if !defined _INC_SKY
 
-// DESLIGADA EM 20/09/2026 - "bug da faca". Ver BNS_KNIFE_RESPAWN_FIX.
-//
-// O que ela fazia: mandava o RPC 129 (RequestSpawn) para TODOS os outros
-// jogadores, com o playerid escrito como UINT32 no BitStream.
-//
-// Do servidor para o cliente, o RPC 129 nao significa "faca o jogador X
-// aparecer spawnando" - ele e a RESPOSTA ao pedido de spawn, e o cliente le o
-// PRIMEIRO BYTE como veredito: 0 = negado, qualquer outro = spawna. Como o
-// BitStream grava o playerid em little-endian, esse primeiro byte E o
-// playerid:
-//
-//   vitima ID 0 -> primeiro byte 0 -> negado, ninguem nota
-//   vitima ID 2 -> primeiro byte 2 -> TODOS OS OUTROS RESPAWNAM
-//
-// Por isso o relato era sempre "mata o ID 2 e o servidor inteiro respawna".
-// O gatilho e o resync de facada: OnPlayerGiveDamage agenda
-// WC_SpawnForStreamedIn num timer de 150ms.
-//
-// O resync util continua: quem faz o trabalho e o par SendLastSyncPacket +
-// ClearAnimationsForPlayer, chamado POR JOGADOR em WC_SpawnForStreamedIn.
-// Esses dois sao endereçados a um cliente so e nao tem efeito global.
-//
-// Reverter: devolver o corpo antigo (copia em
-// dependencies/samp-weapon-config.fork.bak/ na VPS e no git do fork).
 static SpawnPlayerForWorld(playerid)
 {
 	if (!IsPlayerConnected(playerid)) {
 		return 0;
 	}
 
-	printf("[BNS_FACA] SpawnPlayerForWorld(%d) SUPRIMIDO (era RPC 129 global)", playerid);
+	new BitStream:bs = BS_New();
+
+	// O RPC 129 (RequestSpawn) espera DOIS valores: o playerid e o modo de
+	// spawn (o mesmo "2" da native SpawnPlayer). Escrevendo so o playerid, o
+	// cliente lia o proprio playerid como veredito do pedido de spawn:
+	//
+	//   vitima ID 0 -> primeiro byte 0 -> negado, ninguem nota
+	//   vitima ID 2 -> primeiro byte 2 -> TODOS OS OUTROS RESPAWNAM
+	//
+	// Era o "bug da faca": matar o ID 2 respawnava o servidor inteiro. O
+	// gatilho e o resync de facada (WC_SpawnForStreamedIn, timer de 150ms).
+	//
+	// Esta correcao ja existia no fork BrasilNewStart (commit 31a0ddc) e se
+	// perdeu em 06/09/2026, quando a pasta da dependencia foi trocada pelo
+	// upstream puro do oscar-broman. Ver BNS_KNIFE_RESPAWN_FIX.
+	BS_WriteValue(bs, PR_UINT32, playerid, PR_UINT32, 2);
+
+	#if defined _Y_ITERATE_LOCAL_VERSION || defined _FOREACH_LOCAL_VERSION
+	foreach (new i : Player) {
+	#else
+	for (new i = 0; i != MAX_PLAYERS; i++) {
+	#endif
+		if (i != playerid) {
+			PR_SendRPC(bs, i, WC_RPC_REQUEST_SPAWN);
+		}
+	}
+
+	BS_Delete(bs);
 
 	return 1;
 }
