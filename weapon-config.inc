@@ -3954,6 +3954,7 @@ public OnPlayerGiveDamage(playerid, damagedid, Float:amount, WEAPON:weaponid, bo
 
 			// Resync without bothering the player being knifed
 			if (npc || HasSameTeam(playerid, damagedid)) {
+				printf("[BNS_FACA] motivo=MESMO_TIME_OU_NPC autor=%d vitima=%d npc=%d", playerid, damagedid, npc);
 				if (s_KnifeTimeout[damagedid]) {
 					KillTimer(s_KnifeTimeout[damagedid]);
 				}
@@ -3968,6 +3969,7 @@ public OnPlayerGiveDamage(playerid, damagedid, Float:amount, WEAPON:weaponid, bo
 				GetPlayerPos(playerid, x, y, z);
 
 				if (GetPlayerDistanceFromPoint(damagedid, x, y, z) > s_WeaponRange[weaponid] + 2.0) {
+					printf("[BNS_FACA] motivo=LONGE autor=%d vitima=%d dist=%.2f alcance=%.2f", playerid, damagedid, GetPlayerDistanceFromPoint(damagedid, x, y, z), s_WeaponRange[weaponid]);
 					if (s_KnifeTimeout[damagedid]) {
 						KillTimer(s_KnifeTimeout[damagedid]);
 					}
@@ -3981,6 +3983,7 @@ public OnPlayerGiveDamage(playerid, damagedid, Float:amount, WEAPON:weaponid, bo
 			}
 
 			if (!OnPlayerDamage(damagedid, amount, playerid, weaponid, bodypart)) {
+				printf("[BNS_FACA] motivo=GAMEMODE_BLOQUEOU autor=%d vitima=%d", playerid, damagedid);
 				if (s_KnifeTimeout[damagedid]) {
 					KillTimer(s_KnifeTimeout[damagedid]);
 				}
@@ -6687,27 +6690,37 @@ static GetPlayerActualSkin(playerid)
 
 #if !defined _INC_SKY
 
+// DESLIGADA EM 20/09/2026 - "bug da faca". Ver BNS_KNIFE_RESPAWN_FIX.
+//
+// O que ela fazia: mandava o RPC 129 (RequestSpawn) para TODOS os outros
+// jogadores, com o playerid escrito como UINT32 no BitStream.
+//
+// Do servidor para o cliente, o RPC 129 nao significa "faca o jogador X
+// aparecer spawnando" - ele e a RESPOSTA ao pedido de spawn, e o cliente le o
+// PRIMEIRO BYTE como veredito: 0 = negado, qualquer outro = spawna. Como o
+// BitStream grava o playerid em little-endian, esse primeiro byte E o
+// playerid:
+//
+//   vitima ID 0 -> primeiro byte 0 -> negado, ninguem nota
+//   vitima ID 2 -> primeiro byte 2 -> TODOS OS OUTROS RESPAWNAM
+//
+// Por isso o relato era sempre "mata o ID 2 e o servidor inteiro respawna".
+// O gatilho e o resync de facada: OnPlayerGiveDamage agenda
+// WC_SpawnForStreamedIn num timer de 150ms.
+//
+// O resync util continua: quem faz o trabalho e o par SendLastSyncPacket +
+// ClearAnimationsForPlayer, chamado POR JOGADOR em WC_SpawnForStreamedIn.
+// Esses dois sao endereçados a um cliente so e nao tem efeito global.
+//
+// Reverter: devolver o corpo antigo (copia em
+// dependencies/samp-weapon-config.fork.bak/ na VPS e no git do fork).
 static SpawnPlayerForWorld(playerid)
 {
 	if (!IsPlayerConnected(playerid)) {
 		return 0;
 	}
 
-	new BitStream:bs = BS_New();
-
-	BS_WriteValue(bs, PR_UINT32, playerid);
-
-	#if defined _Y_ITERATE_LOCAL_VERSION || defined _FOREACH_LOCAL_VERSION
-	foreach (new i : Player) {
-	#else
-	for (new i = 0; i != MAX_PLAYERS; i++) {
-	#endif
-		if (i != playerid) {
-			PR_SendRPC(bs, i, WC_RPC_REQUEST_SPAWN);
-		}
-	}
-
-	BS_Delete(bs);
+	printf("[BNS_FACA] SpawnPlayerForWorld(%d) SUPRIMIDO (era RPC 129 global)", playerid);
 
 	return 1;
 }
